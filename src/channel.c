@@ -254,7 +254,7 @@ int ri_consumer_acquire(ri_consumer_t *consumer)
 void ri_consumer_release(ri_consumer_t *consumer)
 {
     unsigned owners = atomic_fetch_and(&consumer->owners, RI_OWNER_VECTOR_FLAG);
-    if (!owners) {
+    if (!(owners & RI_OWNER_VECTOR_FLAG)) {
         ri_consumer_delete(consumer);
     }
 }
@@ -263,7 +263,7 @@ void ri_consumer_release(ri_consumer_t *consumer)
 void ri_vector_release_consumer(ri_consumer_t *consumer)
 {
     unsigned owners = atomic_fetch_and(&consumer->owners, RI_OWNER_USER_FLAG);
-    if (!owners)
+    if (!(owners & RI_OWNER_USER_FLAG))
         ri_consumer_delete(consumer);
 }
 
@@ -279,7 +279,7 @@ int ri_producer_acquire(ri_producer_t *producer)
 void ri_producer_release(ri_producer_t *producer)
 {
     unsigned owners = atomic_fetch_and(&producer->owners, RI_OWNER_VECTOR_FLAG);
-    if (!owners)
+    if (!(owners & RI_OWNER_VECTOR_FLAG))
         ri_producer_delete(producer);
 }
 
@@ -287,7 +287,7 @@ void ri_producer_release(ri_producer_t *producer)
 void ri_vector_release_producer(ri_producer_t *producer)
 {
     unsigned owners = atomic_fetch_and(&producer->owners, RI_OWNER_USER_FLAG);
-    if (!owners)
+    if (!(owners & RI_OWNER_USER_FLAG))
         ri_producer_delete(producer);
 }
 

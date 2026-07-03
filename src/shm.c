@@ -29,6 +29,7 @@ struct ri_shm
 
 static void shm_delete(ri_shm_t *shm)
 {
+  LOG_INF("delete shm 0x%p", shm->mem);
   munmap(shm->mem, shm->size);
   close(shm->fd);
   free(shm);
