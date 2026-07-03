@@ -12,15 +12,15 @@
 #include "messages.h"
 
 
-const ri_attr_t client2server_channels[] = {
-    (ri_attr_t) { .add_msgs = 0, .msg_size = sizeof(msg_command_t), .eventfd = 1, .info = { .data = COMMAND_INFO, .size = sizeof(COMMAND_INFO) }},
+const ri_channel_attr_t client2server_channels[] = {
+    (ri_channel_attr_t) { .add_msgs = 0, .msg_size = sizeof(msg_command_t), .eventfd = 1, .info = { .data = COMMAND_INFO, .size = sizeof(COMMAND_INFO) }},
   { 0 },
 };
 
 
-const ri_attr_t server2client_channels[] = {
-  (ri_attr_t) { .add_msgs = 0, .msg_size = sizeof(msg_response_t), .eventfd = 1, .info = { .data = RESPONSE_INFO, .size = sizeof(RESPONSE_INFO) }},
-  (ri_attr_t) { .add_msgs = 10, .msg_size = sizeof(msg_event_t), .eventfd = 1, .info = { .data = EVENT_INFO, .size = sizeof(EVENT_INFO) }},
+const ri_channel_attr_t server2client_channels[] = {
+  (ri_channel_attr_t) { .add_msgs = 0, .msg_size = sizeof(msg_response_t), .eventfd = 1, .info = { .data = RESPONSE_INFO, .size = sizeof(RESPONSE_INFO) }},
+  (ri_channel_attr_t) { .add_msgs = 10, .msg_size = sizeof(msg_event_t), .eventfd = 1, .info = { .data = EVENT_INFO, .size = sizeof(EVENT_INFO) }},
   { 0 },
 };
 
@@ -110,7 +110,7 @@ int event_listen(void *arg)
   return 0;
 }
 
-static client_t* client_new(const char *path, const ri_config_t *config)
+static client_t* client_new(const char *path, const ri_vector_attr_t *config)
 {
   ri_vector_t *vec = ri_client_connect(path, config);
   if (!vec)
@@ -195,12 +195,12 @@ void client_run(client_t *client, const msg_command_t *cmds)
 
 int main()
 {
-  const ri_config_t config = {
+  const ri_vector_attr_t vattr = {
     .consumers = server2client_channels,
     .producers = client2server_channels,
   };
 
-  client_t *client = client_new("rtipc.sock", &config);
+  client_t *client = client_new("rtipc.sock", &vattr);
   if (!client) {
     return -1;
   }

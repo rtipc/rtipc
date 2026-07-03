@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 typedef struct ri_vector ri_vector_t;
-typedef struct ri_config ri_config_t;
+typedef struct ri_vector_attr ri_vector_attr_t;
 
 
 /**
@@ -102,12 +102,12 @@ ri_vector_t* ri_server_accept(const ri_server_t* server, ri_filter_fn filter, vo
  *
  * @param socket  UNIX domain socket file descriptor
  *                (created with socket(AF_UNIX, SOCK_SEQPACKET, 0)).
- * @param vconfig Configuration for the channel vector.
+ * @param vattr Configuration for the channel vector.
  *
  * @return A newly created and initialized vector on success, or NULL if the
  *         connection fails or is rejected by the server.
  */
-ri_vector_t* ri_client_socket_connect(int socket, const ri_config_t *vconfig);
+ri_vector_t* ri_client_socket_connect(int socket, const ri_vector_attr_t *vattr);
 
 
 /**
@@ -120,12 +120,12 @@ ri_vector_t* ri_client_socket_connect(int socket, const ri_config_t *vconfig);
  * channel vector.
  *
  * @param path    Filesystem path of the UNIX domain socket created by the server.
- * @param vconfig Configuration for the channel vector.
+ * @param vattr Configuration for the channel vector.
  *
  * @return Pointer to a newly created and initialized vector on success,
  *         or NULL if the connection fails or is rejected by the server.
  */
-ri_vector_t* ri_client_connect(const char *path, const ri_config_t *vconfig);
+ri_vector_t* ri_client_connect(const char *path, const ri_vector_attr_t *vattr);
 
 
 

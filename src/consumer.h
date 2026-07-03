@@ -5,7 +5,7 @@
 
 typedef struct ri_consumer_queue ri_consumer_queue_t;
 
-ri_consumer_queue_t* ri_consumer_queue_new(const ri_attr_t *attr, ri_shm_t *shm, size_t shm_offset);
+ri_consumer_queue_t* ri_consumer_queue_new(const ri_channel_attr_t *attr, ri_shm_t *shm, size_t shm_offset);
 
 void ri_consumer_queue_init_shm(const ri_consumer_queue_t *consumer);
 

@@ -92,13 +92,13 @@ typedef struct ri_info {
 
 
 /**
- * @typedef ri_attr_t
+ * @typedef ri_channel_attr_t
  * @brief Configuration for creating a producer or consumer channel.
  *
  * This structure is only used during setup. The library copies the
  * values; the caller retains ownership after creation.
  */
-typedef struct ri_attr {
+typedef struct ri_channel_attr {
   /**
    * Size of a single message in bytes.
    *
@@ -126,11 +126,11 @@ typedef struct ri_attr {
    */
   ri_info_t info;
 
-} ri_attr_t;
+} ri_channel_attr_t;
 
 
 /**
- * @typedef ri_config_t
+ * @typedef ri_vector_attr_t
  * @brief Configuration parameters for creating a channel vector.
  *
  * This structure defines the set of producer and consumer channels that
@@ -138,7 +138,7 @@ typedef struct ri_attr {
  * metadata. The configuration is provided at creation time and is not
  * modified by the vector implementation.
  */
-typedef struct ri_config {
+typedef struct ri_vector_attr {
 
   /**
    * Array of consumer channel configurations.
@@ -146,7 +146,7 @@ typedef struct ri_config {
    * The array must be terminated by a sentinel element where @ref msg_size
    * is set to 0.
    */
-  const ri_attr_t *consumers;
+  const ri_channel_attr_t *consumers;
 
   /**
    * Array of producer channel configurations.
@@ -154,7 +154,7 @@ typedef struct ri_config {
    * The array must be terminated by a sentinel element where @ref msg_size
    * is set to 0.
    */
-  const ri_attr_t *producers;
+  const ri_channel_attr_t *producers;
 
   /**
    * Optional user-defined metadata associated with the vector.
@@ -164,7 +164,7 @@ typedef struct ri_config {
    */
   ri_info_t info;
 
-} ri_config_t;
+} ri_vector_attr_t;
 
 
 
@@ -177,10 +177,10 @@ typedef struct ri_config {
  * This function is typically used on the client side when connection
  * establishment is handled via an external or custom IPC mechanism.
  *
- * @param config Pointer to a static vector configuration
+ * @param vattr Pointer to a static vector configuration
  *
  */
-ri_vector_t* ri_vector_new(const ri_config_t *config);
+ri_vector_t* ri_vector_new(const ri_vector_attr_t *vattr);
 
 
 /**

@@ -8,7 +8,7 @@
 
 typedef struct ri_producer_queue ri_producer_queue_t;
 
-ri_producer_queue_t * ri_producer_queue_new(const ri_attr_t *attr, ri_shm_t *shm, size_t shm_offset);
+ri_producer_queue_t * ri_producer_queue_new(const ri_channel_attr_t *attr, ri_shm_t *shm, size_t shm_offset);
 
 void ri_producer_queue_init_shm(const ri_producer_queue_t *producer);
 

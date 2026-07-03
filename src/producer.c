@@ -60,7 +60,7 @@ unsigned ri_producer_queue_len(const ri_producer_queue_t *producer)
   return producer->queue.n_msgs;
 }
 
-ri_producer_queue_t* ri_producer_queue_new(const ri_attr_t *attr, ri_shm_t *shm, size_t shm_offset)
+ri_producer_queue_t* ri_producer_queue_new(const ri_channel_attr_t *attr, ri_shm_t *shm, size_t shm_offset)
 {
   unsigned queue_len = ri_channel_queue_len(attr);
   size_t size = sizeof(ri_producer_queue_t) + queue_len * sizeof(ri_index_t);

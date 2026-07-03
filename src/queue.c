@@ -13,7 +13,7 @@ size_t ri_calc_queue_size(unsigned n_msgs)
 }
 
 
-void ri_queue_init(ri_queue_t *queue, const ri_attr_t *attr, void* shm)
+void ri_queue_init(ri_queue_t *queue, const ri_channel_attr_t *attr, void* shm)
 {
   ri_atomic_index_t *indices = (ri_atomic_index_t *) shm;
 

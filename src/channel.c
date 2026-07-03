@@ -56,7 +56,7 @@ size_t ri_calc_channel_shm_size(unsigned n_msgs, size_t msg_size)
 }
 
 
-size_t ri_calc_shm_size(const ri_attr_t consumers[], const ri_attr_t producers[])
+size_t ri_calc_shm_size(const ri_channel_attr_t consumers[], const ri_channel_attr_t producers[])
 {
   unsigned n_consumers = ri_count_channels(consumers);
   unsigned n_producers = ri_count_channels(producers);
@@ -80,7 +80,7 @@ static void producer_cache_write(const ri_producer_t *producer) {
 }
 
 
-ri_consumer_t* ri_consumer_map(const ri_attr_t *attr, int eventfd, ri_shm_t *shm, size_t shm_offset)
+ri_consumer_t* ri_consumer_map(const ri_channel_attr_t *attr, int eventfd, ri_shm_t *shm, size_t shm_offset)
 {
   ri_consumer_t *consumer = malloc(sizeof(ri_consumer_t));
   if (!consumer)
@@ -122,7 +122,7 @@ fail_alloc:
 }
 
 
-ri_consumer_t* ri_consumer_new(const ri_attr_t *attr, ri_shm_t *shm, size_t shm_offset)
+ri_consumer_t* ri_consumer_new(const ri_channel_attr_t *attr, ri_shm_t *shm, size_t shm_offset)
 {
   int eventfd = -1;
 
@@ -148,7 +148,7 @@ fail_eventfd:
 }
 
 
-ri_producer_t* ri_producer_map(const ri_attr_t *attr, int eventfd, ri_shm_t *shm, size_t shm_offset)
+ri_producer_t* ri_producer_map(const ri_channel_attr_t *attr, int eventfd, ri_shm_t *shm, size_t shm_offset)
 {
   ri_producer_t *producer = malloc(sizeof(ri_producer_t));
   if (!producer)
@@ -190,7 +190,7 @@ fail_alloc:
 }
 
 
-ri_producer_t* ri_producer_new(const ri_attr_t *attr, ri_shm_t *shm, size_t shm_offset)
+ri_producer_t* ri_producer_new(const ri_channel_attr_t *attr, ri_shm_t *shm, size_t shm_offset)
 {
   int eventfd = -1;
 
@@ -304,9 +304,9 @@ void* ri_producer_msg(const ri_producer_t *producer)
 }
 
 
-ri_attr_t ri_consumer_attr(const ri_consumer_t *consumer)
+ri_channel_attr_t ri_consumer_attr(const ri_consumer_t *consumer)
 {
-  return (ri_attr_t) {
+  return (ri_channel_attr_t) {
       .add_msgs =  ri_consumer_queue_len(consumer->queue) - 3,
       .msg_size = ri_consumer_queue_msg_size(consumer->queue),
       .eventfd = consumer->eventfd >= 0,
@@ -316,9 +316,9 @@ ri_attr_t ri_consumer_attr(const ri_consumer_t *consumer)
 }
 
 
-ri_attr_t ri_producer_attr(const ri_producer_t *producer)
+ri_channel_attr_t ri_producer_attr(const ri_producer_t *producer)
 {
-  return (ri_attr_t) {
+  return (ri_channel_attr_t) {
     .add_msgs =  ri_producer_queue_len(producer->queue) - 3,
     .msg_size = ri_producer_queue_msg_size(producer->queue),
     .eventfd = producer->eventfd >= 0,

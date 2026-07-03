@@ -213,17 +213,17 @@ static int produce(ri_producer_t *producer, uint64_t counter, client_stat_t *sta
 
 static int client_entry(int socket)
 {
-  const ri_attr_t producers[] = {
-    (ri_attr_t) { .add_msgs = ADDITIONAL_MSGS, .msg_size = sizeof(msg_t)},
+  const ri_channel_attr_t producers[] = {
+    (ri_channel_attr_t) { .add_msgs = ADDITIONAL_MSGS, .msg_size = sizeof(msg_t)},
     { 0 },
   };
 
-  const ri_config_t config = {
+  const ri_vector_attr_t vattr = {
     .producers = producers,
   };
 
 
-  ri_vector_t *vec = ri_client_socket_connect(socket, &config);
+  ri_vector_t *vec = ri_client_socket_connect(socket, &vattr);
 
   if (!vec) {
     goto fail_connect;
