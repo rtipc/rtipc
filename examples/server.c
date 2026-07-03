@@ -19,11 +19,11 @@ typedef struct server {
 static void server_delete(server_t* server)
 {
   if (server->command)
-    ri_consumer_delete(server->command);
+    ri_consumer_release(server->command);
   if (server->response)
-    ri_producer_delete(server->response);
+    ri_producer_release(server->response);
   if (server->event)
-    ri_producer_delete(server->event);
+    ri_producer_release(server->event);
   free(server);
 }
 
@@ -58,15 +58,15 @@ static server_t* server_new(const char *path)
   if (!server)
     goto fail_alloc;
 
-  server->command = ri_vector_take_consumer(vec, 0);
+  server->command = ri_vector_acquire_consumer(vec, 0);
   if (!server->command)
     goto fail_channel;
 
-  server->response = ri_vector_take_producer(vec, 0);
+  server->response = ri_vector_acquire_producer(vec, 0);
   if (!server->response)
     goto fail_channel;
 
-  server->event = ri_vector_take_producer(vec, 1);
+  server->event = ri_vector_acquire_producer(vec, 1);
   if (!server->event)
     goto fail_channel;
 

@@ -302,7 +302,7 @@ typedef struct ri_consumer ri_consumer_t;
  * @param index Index of the consumer channel to take.
  * @return Pointer to the consumer on success; NULL on error.
  */
-ri_consumer_t* ri_vector_take_consumer(ri_vector_t *vec, unsigned index);
+ri_consumer_t* ri_vector_acquire_consumer(ri_vector_t *vec, unsigned index);
 
 
 /**
@@ -314,7 +314,7 @@ ri_consumer_t* ri_vector_take_consumer(ri_vector_t *vec, unsigned index);
  * If this is the last remaining channel attached to the shared memory,
  * the shared memory region is also destroyed.
  */
-void ri_consumer_delete(ri_consumer_t *consumer);
+void ri_consumer_release(ri_consumer_t *consumer);
 
 
 /**
@@ -470,7 +470,7 @@ typedef struct ri_producer ri_producer_t;
  * @param index Index of the producer channel to take.
  * @return Pointer to the producer on success; NULL on error.
  */
-ri_producer_t* ri_vector_take_producer(ri_vector_t *vec, unsigned index);
+ri_producer_t* ri_vector_acquire_producer(ri_vector_t *vec, unsigned index);
 
 
 /**
@@ -482,7 +482,7 @@ ri_producer_t* ri_vector_take_producer(ri_vector_t *vec, unsigned index);
  * If this is the last remaining channel attached to the shared memory,
  * the shared memory region is also destroyed.
  */
-void ri_producer_delete(ri_producer_t *producer);
+void ri_producer_release(ri_producer_t *producer);
 
 
 /**

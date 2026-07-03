@@ -68,11 +68,11 @@ static msg_command_t commands[] = {
 static void client_delete(client_t *client)
 {
   if (client->command)
-    ri_producer_delete(client->command);
+    ri_producer_release(client->command);
   if (client->response)
-    ri_consumer_delete(client->response);
+    ri_consumer_release(client->response);
   if (client->event)
-    ri_consumer_delete(client->event);
+    ri_consumer_release(client->event);
   free(client);
 }
 
@@ -120,15 +120,15 @@ static client_t* client_new(const char *path, const ri_config_t *config)
   if (!client)
     goto fail_alloc;
 
-  client->command = ri_vector_take_producer(vec, 0);
+  client->command = ri_vector_acquire_producer(vec, 0);
   if (!client->command)
     goto fail_channel;
 
-  client->response = ri_vector_take_consumer(vec, 0);
+  client->response = ri_vector_acquire_consumer(vec, 0);
   if (!client->response)
     goto fail_channel;
 
-  client->event = ri_vector_take_consumer(vec, 1);
+  client->event = ri_vector_acquire_consumer(vec, 1);
   if (!client->event)
     goto fail_channel;
 

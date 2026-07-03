@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <stdatomic.h>
 
 #include "rtipc/log.h"
 #include "mem_utils.h"
@@ -13,7 +14,11 @@
 #include "unix.h"
 
 
+#define RI_OWNER_VECTOR_FLAG 0x1
+#define RI_OWNER_USER_FLAG 0x2
+
 struct ri_consumer {
+  atomic_uint owners;
   ri_consumer_queue_t *queue;
   size_t shm_offset;
   int eventfd;
@@ -24,6 +29,7 @@ struct ri_consumer {
 };
 
 struct ri_producer {
+  atomic_uint owners;
   ri_producer_queue_t *queue;
   size_t shm_offset;
   int eventfd;
@@ -39,6 +45,9 @@ static size_t ri_calc_data_size(unsigned n_msgs, size_t msg_size)
   return n_msgs * cacheline_aligned(msg_size);
 }
 
+
+
+\
 
 size_t ri_calc_channel_shm_size(unsigned n_msgs, size_t msg_size)
 {
@@ -82,6 +91,8 @@ ri_consumer_t* ri_consumer_map(const ri_attr_t *attr, int eventfd, ri_shm_t *shm
       .eventfd = attr->eventfd ? eventfd : -1,
       .info.size = attr->info.size,
   };
+
+  atomic_init(&consumer->owners, RI_OWNER_VECTOR_FLAG);
 
   if ((attr->info.size > 0) && attr->info.data) {
     consumer->info.data = malloc(attr->info.size);
@@ -149,6 +160,8 @@ ri_producer_t* ri_producer_map(const ri_attr_t *attr, int eventfd, ri_shm_t *shm
     .info.size = attr->info.size,
   };
 
+  atomic_init(&producer->owners, RI_OWNER_VECTOR_FLAG);
+
   if ((attr->info.size > 0) && attr->info.data) {
     producer->info.data = malloc(attr->info.size);
 
@@ -203,31 +216,79 @@ fail_eventfd:
 }
 
 
-void ri_consumer_delete(ri_consumer_t *consumer)
+static void ri_producer_delete(ri_producer_t *producer)
 {
-  ri_consumer_queue_delete(consumer->queue);
+    ri_producer_queue_delete(producer->queue);
 
-  if (consumer->eventfd >= 0)
-    close(consumer->eventfd);
+    if (producer->eventfd >= 0)
+        close(producer->eventfd);
 
-  if (consumer->info.data)
-    free(consumer->info.data);
+    if (producer->info.data)
+        free(producer->info.data);
 
-  free(consumer);
+    free(producer);
 }
 
 
-void ri_producer_delete(ri_producer_t *producer)
+static void ri_consumer_delete(ri_consumer_t *consumer)
 {
-  ri_producer_queue_delete(producer->queue);
+    ri_consumer_queue_delete(consumer->queue);
 
-  if (producer->eventfd >= 0)
-    close(producer->eventfd);
+    if (consumer->eventfd >= 0)
+        close(consumer->eventfd);
 
-  if (producer->info.data)
-    free(producer->info.data);
+    if (consumer->info.data)
+        free(consumer->info.data);
 
-  free(producer);
+    free(consumer);
+}
+
+int ri_consumer_acquire(ri_consumer_t *consumer)
+{
+    unsigned owners = atomic_fetch_or(&consumer->owners, RI_OWNER_USER_FLAG);
+
+    return owners & RI_OWNER_USER_FLAG ? -1 : 0;
+}
+
+
+void ri_consumer_release(ri_consumer_t *consumer)
+{
+    unsigned owners = atomic_fetch_and(&consumer->owners, RI_OWNER_VECTOR_FLAG);
+    if (!owners) {
+        ri_consumer_delete(consumer);
+    }
+}
+
+
+void ri_vector_release_consumer(ri_consumer_t *consumer)
+{
+    unsigned owners = atomic_fetch_and(&consumer->owners, RI_OWNER_USER_FLAG);
+    if (!owners)
+        ri_consumer_delete(consumer);
+}
+
+
+int ri_producer_acquire(ri_producer_t *producer)
+{
+    unsigned owners = atomic_fetch_or(&producer->owners, RI_OWNER_USER_FLAG);
+
+    return owners & RI_OWNER_USER_FLAG ? -1 : 0;
+}
+
+
+void ri_producer_release(ri_producer_t *producer)
+{
+    unsigned owners = atomic_fetch_and(&producer->owners, RI_OWNER_VECTOR_FLAG);
+    if (!owners)
+        ri_producer_delete(producer);
+}
+
+
+void ri_vector_release_producer(ri_producer_t *producer)
+{
+    unsigned owners = atomic_fetch_and(&producer->owners, RI_OWNER_USER_FLAG);
+    if (!owners)
+        ri_producer_delete(producer);
 }
 
 

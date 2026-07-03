@@ -48,7 +48,15 @@ size_t ri_calc_shm_size(const ri_attr_t consumers[], const ri_attr_t producers[]
 
 ri_consumer_t* ri_consumer_new(const ri_attr_t *attr, ri_shm_t *shm, size_t shm_offset);
 
+int ri_consumer_acquire(ri_consumer_t *consumer);
+
+void ri_vector_release_consumer(ri_consumer_t *consumer);
+
 ri_producer_t* ri_producer_new(const ri_attr_t *attr, ri_shm_t *shm, size_t shm_offset);
+
+int ri_producer_acquire(ri_producer_t *producer);
+
+void ri_vector_release_producer(ri_producer_t *producer);
 
 ri_consumer_t* ri_consumer_map(const ri_attr_t *attr, int eventfd, ri_shm_t *shm, size_t shm_offset);
 

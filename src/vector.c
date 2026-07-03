@@ -262,18 +262,14 @@ void ri_vector_delete(ri_vector_t* vec)
 {
   if (vec->consumers) {
     for (unsigned i = 0; i < vec->n_consumers; i++) {
-      if (vec->consumers[i]) {
-        ri_consumer_delete(vec->consumers[i]);
-      }
+        ri_vector_release_consumer(vec->consumers[i]);
     }
     free(vec->consumers);
   }
 
   if (vec->producers) {
     for (unsigned i = 0; i < vec->n_producers; i++) {
-      if (vec->producers[i]) {
-        ri_producer_delete(vec->producers[i]);
-      }
+        ri_vector_release_producer(vec->producers[i]);
     }
     free(vec->producers);
   }
@@ -446,27 +442,33 @@ void ri_vector_free_info(ri_vector_t* vec)
 }
 
 
-ri_producer_t* ri_vector_take_producer(ri_vector_t *vec, unsigned index)
+ri_producer_t* ri_vector_acquire_producer(ri_vector_t *vec, unsigned index)
 {
   if (index >= vec->n_producers)
     return NULL;
 
   ri_producer_t* producer = vec->producers[index];
 
-  vec->producers[index] = NULL;
+  int r = ri_producer_acquire(producer);
+
+  if (r < 0)
+      return NULL;
 
   return producer;
 }
 
 
-ri_consumer_t* ri_vector_take_consumer(ri_vector_t *vec, unsigned index)
+ri_consumer_t* ri_vector_acquire_consumer(ri_vector_t *vec, unsigned index)
 {
   if (index >= vec->n_consumers)
     return NULL;
 
   ri_consumer_t* consumer = vec->consumers[index];
 
-  vec->consumers[index] = NULL;
+  int r = ri_consumer_acquire(consumer);
+
+  if (r < 0)
+      return NULL;
 
   return consumer;
 }

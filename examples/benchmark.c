@@ -229,7 +229,7 @@ static int client_entry(int socket)
     goto fail_connect;
   }
 
-  ri_producer_t *producer = ri_vector_take_producer(vec, 0);
+  ri_producer_t *producer = ri_vector_acquire_producer(vec, 0);
 
   if (!producer) {
     goto fail_connect;
@@ -260,7 +260,7 @@ static int client_entry(int socket)
   ri_producer_force_push(producer);
 
   /* not needed anymore */
-  ri_producer_delete(producer);
+  ri_producer_release(producer);
 
   /* let the server print first */
   usleep(100000);
@@ -285,7 +285,7 @@ static int server_entry(int socket)
     goto fail_vec;
   }
 
-  ri_consumer_t *consumer = ri_vector_take_consumer(vec, 0);
+  ri_consumer_t *consumer = ri_vector_acquire_consumer(vec, 0);
 
   if (!consumer) {
     goto fail_consumer;
@@ -305,7 +305,7 @@ static int server_entry(int socket)
     state = consume(consumer, &counter, &stat);
   }
 
-  ri_consumer_delete(consumer);
+  ri_consumer_release(consumer);
 
   print_server_stat(&stat);
 
