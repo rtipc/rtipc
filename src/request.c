@@ -149,7 +149,7 @@ static int request_read_channel(request_reader_t *reader, ri_channel_attr_t *att
 }
 
 
-size_t ri_request_calc_size(const ri_vector_attr_t *config)
+size_t ri_request_calc_size(const ri_group_attr_t *config)
 {
   unsigned n_consumers = ri_count_channels(config->consumers);
   unsigned n_producers = ri_count_channels(config->producers);
@@ -179,7 +179,7 @@ size_t ri_request_calc_size(const ri_vector_attr_t *config)
 }
 
 
-ri_vector_attr_t ri_request_parse(const void *req, size_t size, ri_channel_attr_t **attrs)
+ri_group_attr_t ri_request_parse(const void *req, size_t size, ri_channel_attr_t **attrs)
 {
   if (!attrs) {
     goto fail_args;
@@ -269,7 +269,7 @@ ri_vector_attr_t ri_request_parse(const void *req, size_t size, ri_channel_attr_
 
   *attrs = channels;
 
-  return (ri_vector_attr_t) {
+  return (ri_group_attr_t) {
          .consumers = consumers,
          .producers = producers,
          .info = vec_info,
@@ -280,11 +280,11 @@ fail_channel:
 fail_parse:
 fail_alloc:
 fail_args:
-  return (ri_vector_attr_t) {.consumers = NULL, .producers = NULL};
+  return (ri_group_attr_t) {.consumers = NULL, .producers = NULL};
 }
 
 
-int ri_request_write(const ri_vector_attr_t* vattr, void *req, size_t size)
+int ri_request_write(const ri_group_attr_t* vattr, void *req, size_t size)
 {
   if (!size)
     goto fail;

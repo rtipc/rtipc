@@ -218,25 +218,25 @@ static int client_entry(int socket)
     { 0 },
   };
 
-  const ri_vector_attr_t vattr = {
+  const ri_group_attr_t vattr = {
     .producers = producers,
   };
 
 
-  ri_vector_t *vec = ri_client_socket_connect(socket, &vattr);
+  ri_group_t *vec = ri_client_socket_connect(socket, &vattr);
 
   if (!vec) {
     goto fail_connect;
   }
 
-  ri_producer_t *producer = ri_vector_acquire_producer(vec, 0);
+  ri_producer_t *producer = ri_group_acquire_producer(vec, 0);
 
   if (!producer) {
     goto fail_connect;
   }
 
   /* not needed anymore */
-  ri_vector_delete(vec);
+  ri_group_delete(vec);
 
   client_stat_t stat = {0};
 
@@ -279,20 +279,20 @@ fail_connect:
 
 static int server_entry(int socket)
 {
-  ri_vector_t *vec = ri_server_socket_accept(socket, NULL, NULL);
+  ri_group_t *vec = ri_server_socket_accept(socket, NULL, NULL);
 
   if (!vec) {
     goto fail_vec;
   }
 
-  ri_consumer_t *consumer = ri_vector_acquire_consumer(vec, 0);
+  ri_consumer_t *consumer = ri_group_acquire_consumer(vec, 0);
 
   if (!consumer) {
     goto fail_consumer;
   }
 
 
-  ri_vector_delete(vec);
+  ri_group_delete(vec);
 
   int state = 1;
   const msg_t *msg = NULL;
@@ -312,7 +312,7 @@ static int server_entry(int socket)
   return 0;
 
 fail_consumer:
-  ri_vector_delete(vec);
+  ri_group_delete(vec);
 fail_vec:
   return -1;
 }

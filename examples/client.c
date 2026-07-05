@@ -110,9 +110,9 @@ int event_listen(void *arg)
   return 0;
 }
 
-static client_t* client_new(const char *path, const ri_vector_attr_t *config)
+static client_t* client_new(const char *path, const ri_group_attr_t *config)
 {
-  ri_vector_t *vec = ri_client_connect(path, config);
+  ri_group_t *vec = ri_client_connect(path, config);
   if (!vec)
     goto fail_connect;
 
@@ -120,15 +120,15 @@ static client_t* client_new(const char *path, const ri_vector_attr_t *config)
   if (!client)
     goto fail_alloc;
 
-  client->command = ri_vector_acquire_producer(vec, 0);
+  client->command = ri_group_acquire_producer(vec, 0);
   if (!client->command)
     goto fail_channel;
 
-  client->response = ri_vector_acquire_consumer(vec, 0);
+  client->response = ri_group_acquire_consumer(vec, 0);
   if (!client->response)
     goto fail_channel;
 
-  client->event = ri_vector_acquire_consumer(vec, 1);
+  client->event = ri_group_acquire_consumer(vec, 1);
   if (!client->event)
     goto fail_channel;
 
@@ -140,7 +140,7 @@ static client_t* client_new(const char *path, const ri_vector_attr_t *config)
   }
 
 
-  ri_vector_delete(vec);
+  ri_group_delete(vec);
 
   return client;
 
@@ -148,7 +148,7 @@ fail_thread:
 fail_channel:
   client_delete(client);
 fail_alloc:
-  ri_vector_delete(vec);
+  ri_group_delete(vec);
 fail_connect:
   return NULL;
 }
@@ -195,7 +195,7 @@ void client_run(client_t *client, const msg_command_t *cmds)
 
 int main()
 {
-  const ri_vector_attr_t vattr = {
+  const ri_group_attr_t vattr = {
     .consumers = server2client_channels,
     .producers = client2server_channels,
   };

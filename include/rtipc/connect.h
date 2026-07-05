@@ -6,8 +6,8 @@
 extern "C" {
 #endif
 
-typedef struct ri_vector ri_vector_t;
-typedef struct ri_vector_attr ri_vector_attr_t;
+typedef struct ri_group ri_group_t;
+typedef struct ri_group_attr ri_group_attr_t;
 
 
 /**
@@ -51,7 +51,7 @@ void ri_server_delete(ri_server_t* server);
  */
 int ri_server_socket(const ri_server_t* server);
 
-typedef bool (*ri_filter_fn)(const ri_vector_t* vec, void *user_data);
+typedef bool (*ri_filter_fn)(const ri_group_t* vec, void *user_data);
 
 /**
  * @brief Accept a client connection and constructs a channel vector.
@@ -70,7 +70,7 @@ typedef bool (*ri_filter_fn)(const ri_vector_t* vec, void *user_data);
  * @return A newly created vector on success, or NULL if the connection
  *         fails or is rejected by @p filter.
  */
-ri_vector_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user_data);
+ri_group_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user_data);
 
 
 /**
@@ -89,7 +89,7 @@ ri_vector_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user
  * @return A newly created vector on success, or NULL if the connection
  *         fails or is rejected by @p filter.
  */
-ri_vector_t* ri_server_accept(const ri_server_t* server, ri_filter_fn filter, void *user_data);
+ri_group_t* ri_server_accept(const ri_server_t* server, ri_filter_fn filter, void *user_data);
 
 
 /**
@@ -107,7 +107,7 @@ ri_vector_t* ri_server_accept(const ri_server_t* server, ri_filter_fn filter, vo
  * @return A newly created and initialized vector on success, or NULL if the
  *         connection fails or is rejected by the server.
  */
-ri_vector_t* ri_client_socket_connect(int socket, const ri_vector_attr_t *vattr);
+ri_group_t* ri_client_socket_connect(int socket, const ri_group_attr_t *vattr);
 
 
 /**
@@ -125,7 +125,7 @@ ri_vector_t* ri_client_socket_connect(int socket, const ri_vector_attr_t *vattr)
  * @return Pointer to a newly created and initialized vector on success,
  *         or NULL if the connection fails or is rejected by the server.
  */
-ri_vector_t* ri_client_connect(const char *path, const ri_vector_attr_t *vattr);
+ri_group_t* ri_client_connect(const char *path, const ri_group_attr_t *vattr);
 
 
 

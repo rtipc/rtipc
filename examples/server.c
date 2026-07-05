@@ -46,7 +46,7 @@ static server_t* server_new(const char *path)
   if (!ri_server)
     goto fail_server;
 
-  ri_vector_t *vec = ri_server_accept(ri_server, NULL, NULL);
+  ri_group_t *vec = ri_server_accept(ri_server, NULL, NULL);
 
   ri_server_delete(ri_server);
 
@@ -58,19 +58,19 @@ static server_t* server_new(const char *path)
   if (!server)
     goto fail_alloc;
 
-  server->command = ri_vector_acquire_consumer(vec, 0);
+  server->command = ri_group_acquire_consumer(vec, 0);
   if (!server->command)
     goto fail_channel;
 
-  server->response = ri_vector_acquire_producer(vec, 0);
+  server->response = ri_group_acquire_producer(vec, 0);
   if (!server->response)
     goto fail_channel;
 
-  server->event = ri_vector_acquire_producer(vec, 1);
+  server->event = ri_group_acquire_producer(vec, 1);
   if (!server->event)
     goto fail_channel;
 
-  ri_vector_delete(vec);
+  ri_group_delete(vec);
 
   server_print_info(server);
 
@@ -79,7 +79,7 @@ static server_t* server_new(const char *path)
 fail_channel:
   server_delete(server);
 fail_alloc:
-   ri_vector_delete(vec);
+   ri_group_delete(vec);
 fail_server:
   return NULL;
 }

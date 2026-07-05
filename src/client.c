@@ -81,9 +81,9 @@ fail_send:
 }
 
 
-static ri_uxmsg_t* uxmsg_from_vector(const ri_vector_t *vec)
+static ri_uxmsg_t* uxmsg_from_group(const ri_group_t *grp)
 {
-  size_t req_size = ri_vector_serialize_size(vec);
+  size_t req_size = ri_group_serialize_size(grp);
 
   ri_uxmsg_t *req = ri_uxmsg_new(req_size);
   if (!req)
@@ -93,7 +93,7 @@ static ri_uxmsg_t* uxmsg_from_vector(const ri_vector_t *vec)
   unsigned n_fds;
   int *fds = ri_uxmsg_fds(req, &n_fds);
 
-  int r = ri_vector_serialize(vec, req_data, req_size, fds, &n_fds);
+  int r = ri_group_serialize(grp, req_data, req_size, fds, &n_fds);
   if (r < 0)
     goto fail_construct;
 
@@ -110,15 +110,15 @@ fail_alloc:
 }
 
 
-ri_vector_t* ri_client_socket_connect(int socket, const ri_vector_attr_t *vattr)
+ri_group_t* ri_client_socket_connect(int socket, const ri_group_attr_t *vattr)
 {
-  ri_vector_t *vec = ri_vector_new(vattr);
-  if (!vec) {
-    LOG_ERR("ri_vector_new failed");
-    goto fail_vec;
+  ri_group_t *grp = ri_group_new(vattr);
+  if (!grp) {
+    LOG_ERR("ri_group_new failed");
+    goto fail_grp;
   }
 
-  ri_uxmsg_t *req = uxmsg_from_vector(vec);
+  ri_uxmsg_t *req = uxmsg_from_group(grp);
   if (!req) {
     LOG_ERR("uxmsg_from_resource failed");
     goto fail_req;
@@ -133,18 +133,18 @@ ri_vector_t* ri_client_socket_connect(int socket, const ri_vector_attr_t *vattr)
 
   ri_uxmsg_delete(req);
 
-  return vec;
+  return grp;
 
 fail_exchange:
   ri_uxmsg_delete(req);
 fail_req:
-  ri_vector_delete(vec);
-fail_vec:
+  ri_group_delete(grp);
+fail_grp:
   return NULL;
 }
 
 
-ri_vector_t* ri_client_connect(const char *path, const ri_vector_attr_t *vattr)
+ri_group_t* ri_client_connect(const char *path, const ri_group_attr_t *vattr)
 {
   int socket = connect_path(path);
 
@@ -152,9 +152,9 @@ ri_vector_t* ri_client_connect(const char *path, const ri_vector_attr_t *vattr)
     return NULL;
   }
 
-  ri_vector_t *vec = ri_client_socket_connect(socket, vattr);
+  ri_group_t *grp = ri_client_socket_connect(socket, vattr);
 
   close(socket);
 
-  return vec;
+  return grp;
 }

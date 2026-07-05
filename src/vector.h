@@ -2,8 +2,8 @@
 
 #include "rtipc/rtipc.h"
 
-void ri_vector_delete(ri_vector_t* vec);
+void ri_group_delete(ri_group_t* vec);
 
-ri_info_t ri_vector_get_info(const ri_vector_t* vec);
+ri_info_t ri_group_get_info(const ri_group_t* vec);
 
-void ri_vector_free_info(ri_vector_t* vec);
+void ri_group_free_info(ri_group_t* vec);

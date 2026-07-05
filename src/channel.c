@@ -14,7 +14,7 @@
 #include "unix.h"
 
 
-#define RI_OWNER_VECTOR_FLAG 0x1
+#define RI_OWNER_GROUP_FLAG 0x1
 #define RI_OWNER_USER_FLAG 0x2
 
 struct ri_consumer {
@@ -92,7 +92,7 @@ ri_consumer_t* ri_consumer_map(const ri_channel_attr_t *attr, int eventfd, ri_sh
       .info.size = attr->info.size,
   };
 
-  atomic_init(&consumer->owners, RI_OWNER_VECTOR_FLAG);
+  atomic_init(&consumer->owners, RI_OWNER_GROUP_FLAG);
 
   if ((attr->info.size > 0) && attr->info.data) {
     consumer->info.data = malloc(attr->info.size);
@@ -160,7 +160,7 @@ ri_producer_t* ri_producer_map(const ri_channel_attr_t *attr, int eventfd, ri_sh
     .info.size = attr->info.size,
   };
 
-  atomic_init(&producer->owners, RI_OWNER_VECTOR_FLAG);
+  atomic_init(&producer->owners, RI_OWNER_GROUP_FLAG);
 
   if ((attr->info.size > 0) && attr->info.data) {
     producer->info.data = malloc(attr->info.size);
@@ -253,14 +253,14 @@ int ri_consumer_acquire(ri_consumer_t *consumer)
 
 void ri_consumer_release(ri_consumer_t *consumer)
 {
-    unsigned owners = atomic_fetch_and(&consumer->owners, RI_OWNER_VECTOR_FLAG);
-    if (!(owners & RI_OWNER_VECTOR_FLAG)) {
+    unsigned owners = atomic_fetch_and(&consumer->owners, RI_OWNER_GROUP_FLAG);
+    if (!(owners & RI_OWNER_GROUP_FLAG)) {
         ri_consumer_delete(consumer);
     }
 }
 
 
-void ri_vector_release_consumer(ri_consumer_t *consumer)
+void ri_group_release_consumer(ri_consumer_t *consumer)
 {
     unsigned owners = atomic_fetch_and(&consumer->owners, RI_OWNER_USER_FLAG);
     if (!(owners & RI_OWNER_USER_FLAG))
@@ -278,13 +278,13 @@ int ri_producer_acquire(ri_producer_t *producer)
 
 void ri_producer_release(ri_producer_t *producer)
 {
-    unsigned owners = atomic_fetch_and(&producer->owners, RI_OWNER_VECTOR_FLAG);
-    if (!(owners & RI_OWNER_VECTOR_FLAG))
+    unsigned owners = atomic_fetch_and(&producer->owners, RI_OWNER_GROUP_FLAG);
+    if (!(owners & RI_OWNER_GROUP_FLAG))
         ri_producer_delete(producer);
 }
 
 
-void ri_vector_release_producer(ri_producer_t *producer)
+void ri_group_release_producer(ri_producer_t *producer)
 {
     unsigned owners = atomic_fetch_and(&producer->owners, RI_OWNER_USER_FLAG);
     if (!(owners & RI_OWNER_USER_FLAG))

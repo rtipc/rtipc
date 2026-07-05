@@ -10,7 +10,7 @@
 #include "unix.h"
 #include "request.h"
 
-struct ri_vector {
+struct ri_group {
   ri_shm_t *shm;
   unsigned n_consumers;
   unsigned n_producers;
@@ -46,51 +46,51 @@ static int take_eventfd(unsigned idx, int fds[], unsigned n_fds)
 }
 
 
-static ri_vector_attr_t ri_vector_config(const ri_vector_t *vec, ri_channel_attr_t **attrs)
+static ri_group_attr_t ri_group_attr(const ri_group_t *grp, ri_channel_attr_t **attrs)
 {
   if (!attrs) {
     goto fail_args;
   }
-  ri_channel_attr_t *channels = calloc(vec->n_consumers + vec->n_producers + 2, sizeof(ri_channel_attr_t));
+  ri_channel_attr_t *channels = calloc(grp->n_consumers + grp->n_producers + 2, sizeof(ri_channel_attr_t));
   if (!channels) {
     goto fail_alloc;
   }
 
   ri_channel_attr_t *consumers = &channels[0];
-  ri_channel_attr_t *producers = &channels[vec->n_consumers + 1];
+  ri_channel_attr_t *producers = &channels[grp->n_consumers + 1];
 
-  for (unsigned i = 0; i < vec->n_consumers; i++) {
-    if (!vec->consumers[i])
+  for (unsigned i = 0; i < grp->n_consumers; i++) {
+    if (!grp->consumers[i])
       continue;
-    consumers[i] = ri_consumer_attr(vec->consumers[i]);
+    consumers[i] = ri_consumer_attr(grp->consumers[i]);
   }
 
-  for (unsigned i = 0; i < vec->n_producers; i++) {
-    if (!vec->producers[i])
+  for (unsigned i = 0; i < grp->n_producers; i++) {
+    if (!grp->producers[i])
       continue;
-    producers[i] = ri_producer_attr(vec->producers[i]);
+    producers[i] = ri_producer_attr(grp->producers[i]);
   }
 
   *attrs = channels;
 
-  return (ri_vector_attr_t) {
+  return (ri_group_attr_t) {
       .consumers = consumers,
       .producers = producers,
-      .info.size = vec->info.size,
-      .info.data = vec->info.data,
+      .info.size = grp->info.size,
+      .info.data = grp->info.data,
   };
 
 
 fail_alloc:
 fail_args:
-  return (ri_vector_attr_t) {.consumers = NULL, .producers = NULL};
+  return (ri_group_attr_t) {.consumers = NULL, .producers = NULL};
 }
 
 
-static int build_request(const ri_vector_t *vec, void* req, size_t size) {
+static int build_request(const ri_group_t *grp, void* req, size_t size) {
   ri_channel_attr_t *attrs = NULL;
 
-  ri_vector_attr_t vattr = ri_vector_config(vec, &attrs);
+  ri_group_attr_t vattr = ri_group_attr(grp, &attrs);
   if (!attrs)
     return -1;
 
@@ -102,19 +102,19 @@ static int build_request(const ri_vector_t *vec, void* req, size_t size) {
 }
 
 
-static int collect_fds(const ri_vector_t *vec, int fds[], unsigned n_fds) {
+static int collect_fds(const ri_group_t *grp, int fds[], unsigned n_fds) {
   if (n_fds < 1)
     return -EINVAL;
 
   unsigned idx = 0;
 
-  fds[idx++] = ri_shm_get_fd(vec->shm);
+  fds[idx++] = ri_shm_get_fd(grp->shm);
 
-  for (unsigned i = 0; i < vec->n_producers; i++) {
-    if (!vec->producers[i])
+  for (unsigned i = 0; i < grp->n_producers; i++) {
+    if (!grp->producers[i])
       continue;
 
-    int eventfd = ri_producer_eventfd(vec->producers[i]);
+    int eventfd = ri_producer_eventfd(grp->producers[i]);
 
     if (eventfd >= 0) {
       if (idx >= n_fds)
@@ -123,11 +123,11 @@ static int collect_fds(const ri_vector_t *vec, int fds[], unsigned n_fds) {
     }
   }
 
-  for (unsigned i = 0; i < vec->n_consumers; i++) {
-    if (!vec->consumers[i])
+  for (unsigned i = 0; i < grp->n_consumers; i++) {
+    if (!grp->consumers[i])
       continue;
 
-    int eventfd = ri_consumer_eventfd(vec->consumers[i]);
+    int eventfd = ri_consumer_eventfd(grp->consumers[i]);
 
     if (eventfd >= 0) {
       if (idx >= n_fds)
@@ -140,52 +140,52 @@ static int collect_fds(const ri_vector_t *vec, int fds[], unsigned n_fds) {
 }
 
 
-static ri_vector_t* ri_vector_alloc(unsigned n_consumers, unsigned n_producers, const ri_info_t *info)
+static ri_group_t* ri_group_alloc(unsigned n_consumers, unsigned n_producers, const ri_info_t *info)
 {
-  ri_vector_t *vec = calloc(1, sizeof(ri_vector_t));
+  ri_group_t *grp = calloc(1, sizeof(ri_group_t));
 
-  if (!vec)
+  if (!grp)
     goto fail_alloc;
 
-  if (info->size > 0 && vec->info.data) {
-    vec->info.data = malloc(info->size);
+  if (info->size > 0 && grp->info.data) {
+    grp->info.data = malloc(info->size);
 
-    if (!vec->info.data)
+    if (!grp->info.data)
       goto fail_info;
 
-    memcpy(vec->info.data, info->data, info->size);
+    memcpy(grp->info.data, info->data, info->size);
 
-    vec->info.size = info->size;
+    grp->info.size = info->size;
   }
 
   if (n_consumers > 0) {
-    vec->consumers = calloc(n_consumers, sizeof(ri_consumer_t*));
+    grp->consumers = calloc(n_consumers, sizeof(ri_consumer_t*));
 
-    if (!vec->consumers)
+    if (!grp->consumers)
       goto fail_consumers;
   }
 
   if (n_producers > 0) {
-    vec->producers = calloc(n_producers, sizeof(ri_producer_t*));
+    grp->producers = calloc(n_producers, sizeof(ri_producer_t*));
 
-    if (!vec->producers)
+    if (!grp->producers)
       goto fail_producers;
   }
 
-  vec->n_consumers = n_consumers;
-  vec->n_producers = n_producers;
+  grp->n_consumers = n_consumers;
+  grp->n_producers = n_producers;
 
-  return vec;
+  return grp;
 
 fail_producers:
   if (n_consumers > 0)
-    free(vec->consumers);
+    free(grp->consumers);
 fail_consumers:
-  if (vec->info.data) {
-    free(vec->info.data);
+  if (grp->info.data) {
+    free(grp->info.data);
   }
 fail_info:
-  free(vec);
+  free(grp);
 fail_alloc:
   return NULL;
 }
@@ -210,82 +210,82 @@ fail_fd:
 }
 
 
-ri_vector_t* ri_vector_new(const ri_vector_attr_t *vattr)
+ri_group_t* ri_group_new(const ri_group_attr_t *vattr)
 {
   unsigned n_producers = ri_count_channels(vattr->producers);
   unsigned n_consumers = ri_count_channels(vattr->consumers);
 
-  ri_vector_t *vec = ri_vector_alloc(n_consumers, n_producers, &vattr->info);
-  if (!vec)
+  ri_group_t *grp = ri_group_alloc(n_consumers, n_producers, &vattr->info);
+  if (!grp)
     goto fail_alloc;
 
   size_t shm_size = ri_calc_shm_size(vattr->consumers, vattr->producers);
 
-  vec->shm = shm_new(shm_size);
-  if (!vec->shm)
+  grp->shm = shm_new(shm_size);
+  if (!grp->shm)
     goto fail_shm;
 
   size_t shm_offset = 0;
 
 
-  for (unsigned i = 0; i < vec->n_producers; i++) {
+  for (unsigned i = 0; i < grp->n_producers; i++) {
     const ri_channel_attr_t *attr = &vattr->producers[i];
 
-    vec->producers[i] = ri_producer_new(attr, vec->shm, shm_offset);
-    if (!vec->producers[i])
+    grp->producers[i] = ri_producer_new(attr, grp->shm, shm_offset);
+    if (!grp->producers[i])
       goto fail_channel;
 
     shm_offset += ri_channel_shm_size(attr);
   }
 
-  for (unsigned i = 0; i < vec->n_consumers; i++) {
+  for (unsigned i = 0; i < grp->n_consumers; i++) {
     const ri_channel_attr_t *attr = &vattr->consumers[i];
 
-    vec->consumers[i] = ri_consumer_new(attr, vec->shm, shm_offset);
-    if (!vec->consumers[i])
+    grp->consumers[i] = ri_consumer_new(attr, grp->shm, shm_offset);
+    if (!grp->consumers[i])
       goto fail_channel;
 
     shm_offset += ri_channel_shm_size(attr);
   }
 
-  return vec;
+  return grp;
 
 fail_channel:
 fail_shm:
-  ri_vector_delete(vec);
+  ri_group_delete(grp);
 fail_alloc:
   return NULL;
 }
 
 
-void ri_vector_delete(ri_vector_t* vec)
+void ri_group_delete(ri_group_t* grp)
 {
-  if (vec->consumers) {
-    for (unsigned i = 0; i < vec->n_consumers; i++) {
-        ri_vector_release_consumer(vec->consumers[i]);
+  if (grp->consumers) {
+    for (unsigned i = 0; i < grp->n_consumers; i++) {
+        ri_group_release_consumer(grp->consumers[i]);
     }
-    free(vec->consumers);
+    free(grp->consumers);
   }
 
-  if (vec->producers) {
-    for (unsigned i = 0; i < vec->n_producers; i++) {
-        ri_vector_release_producer(vec->producers[i]);
+  if (grp->producers) {
+    for (unsigned i = 0; i < grp->n_producers; i++) {
+        ri_group_release_producer(grp->producers[i]);
     }
-    free(vec->producers);
+    free(grp->producers);
   }
 
-  if (vec->shm)
-    ri_shm_unref(vec->shm);
+  if (grp->shm)
+    ri_shm_unref(grp->shm);
 
-  free(vec);
+  free(grp);
 }
 
 
-size_t ri_vector_serialize_size(const ri_vector_t *vec)
+size_t ri_group_serialize_size(const ri_group_t *grp)
 {
   ri_channel_attr_t *attrs = NULL;
 
-  ri_vector_attr_t config = ri_vector_config(vec, &attrs);
+  ri_group_attr_t config = ri_group_attr(grp, &attrs);
   if (!attrs)
     return 0;
 
@@ -297,16 +297,16 @@ size_t ri_vector_serialize_size(const ri_vector_t *vec)
 }
 
 
-int ri_vector_serialize(const ri_vector_t *vec, void* req, size_t size, int fds[], unsigned *n_fds)
+int ri_group_serialize(const ri_group_t *grp, void* req, size_t size, int fds[], unsigned *n_fds)
 {
   if (!n_fds || (*n_fds < 1))
     return -EINVAL;
 
-  int r = build_request(vec, req, size);
+  int r = build_request(grp, req, size);
   if (r < 0)
     return r;
 
-  r = collect_fds(vec, fds, *n_fds);
+  r = collect_fds(grp, fds, *n_fds);
   if (r < 0)
     return r;
 
@@ -316,7 +316,7 @@ int ri_vector_serialize(const ri_vector_t *vec, void* req, size_t size, int fds[
 }
 
 
-static ri_vector_t* ri_vector_map(const ri_vector_attr_t *vattr, int fds[], unsigned *n_fds)
+static ri_group_t* ri_group_map(const ri_group_attr_t *vattr, int fds[], unsigned *n_fds)
 {
   if (!fds || !n_fds || (*n_fds < 1))
     goto fail_args;
@@ -325,16 +325,16 @@ static ri_vector_t* ri_vector_map(const ri_vector_attr_t *vattr, int fds[], unsi
   unsigned n_consumers = ri_count_channels(vattr->consumers);
   unsigned n_producers = ri_count_channels(vattr->producers);
 
-  ri_vector_t *vec = ri_vector_alloc(n_consumers, n_producers, &vattr->info);
-  if (!vec)
+  ri_group_t *grp = ri_group_alloc(n_consumers, n_producers, &vattr->info);
+  if (!grp)
     goto fail_alloc;
 
   int r = ri_memfd_verify(fds[0]);
   if (r < 0)
     goto fail_shm;
 
-  vec->shm = ri_shm_map(fds[0]);
-  if (!vec->shm)
+  grp->shm = ri_shm_map(fds[0]);
+  if (!grp->shm)
     goto fail_shm;
 
   /* ownership of shmfd transfered to shm */
@@ -343,7 +343,7 @@ static ri_vector_t* ri_vector_map(const ri_vector_attr_t *vattr, int fds[], unsi
   unsigned idx = 1;
   size_t shm_offset = 0;
 
-  for (unsigned i = 0; i < vec->n_consumers; i++) {
+  for (unsigned i = 0; i < grp->n_consumers; i++) {
     const ri_channel_attr_t *attr = &vattr->consumers[i];
 
     if (attr->eventfd) {
@@ -352,9 +352,9 @@ static ri_vector_t* ri_vector_map(const ri_vector_attr_t *vattr, int fds[], unsi
         goto fail_channel;
     }
 
-    vec->consumers[i] = ri_consumer_map(attr, eventfd, vec->shm, shm_offset);
+    grp->consumers[i] = ri_consumer_map(attr, eventfd, grp->shm, shm_offset);
 
-    if (!vec->consumers[i])
+    if (!grp->consumers[i])
       goto fail_channel;
 
     /* ownership of eventfd transfered to consumer */
@@ -362,7 +362,7 @@ static ri_vector_t* ri_vector_map(const ri_vector_attr_t *vattr, int fds[], unsi
     shm_offset += ri_channel_shm_size(attr);
   }
 
-  for (unsigned i = 0; i < vec->n_producers; i++) {
+  for (unsigned i = 0; i < grp->n_producers; i++) {
     const ri_channel_attr_t *attr = &vattr->producers[i];
 
     if (attr->eventfd) {
@@ -371,8 +371,8 @@ static ri_vector_t* ri_vector_map(const ri_vector_attr_t *vattr, int fds[], unsi
         goto fail_channel;
     }
 
-    vec->producers[i] = ri_producer_map(attr, eventfd, vec->shm, shm_offset);
-    if (!vec->producers[i])
+    grp->producers[i] = ri_producer_map(attr, eventfd, grp->shm, shm_offset);
+    if (!grp->producers[i])
       goto fail_channel;
 
     /* ownership of eventfd transfered to producer */
@@ -380,74 +380,74 @@ static ri_vector_t* ri_vector_map(const ri_vector_attr_t *vattr, int fds[], unsi
     shm_offset += ri_channel_shm_size(attr);
   }
 
-  return vec;
+  return grp;
 
 fail_channel:
   if (eventfd >= 0)
     close(eventfd);
 fail_shm:
-  ri_vector_delete(vec);
+  ri_group_delete(grp);
 fail_alloc:
 fail_args:
   return NULL;
 }
 
 
-ri_vector_t* ri_vector_deserialize(const void* req, size_t size, int fds[], unsigned *n_fds)
+ri_group_t* ri_group_deserialize(const void* req, size_t size, int fds[], unsigned *n_fds)
 {
   if (!n_fds || (*n_fds < 1))
     return NULL;
 
   ri_channel_attr_t *attrs = NULL;
-  ri_vector_attr_t vattr = ri_request_parse(req, size, &attrs);
+  ri_group_attr_t vattr = ri_request_parse(req, size, &attrs);
   if (!attrs)
     return NULL;
 
-  ri_vector_t *vec = ri_vector_map(&vattr, fds, n_fds);
+  ri_group_t *grp = ri_group_map(&vattr, fds, n_fds);
 
   free(attrs);
 
-  return vec;
+  return grp;
 }
 
 
-unsigned ri_vector_num_producers(const ri_vector_t *vec)
+unsigned ri_group_num_producers(const ri_group_t *grp)
 {
-  return vec->n_producers;
+  return grp->n_producers;
 }
 
 
-unsigned ri_vector_num_consumers(const ri_vector_t *vec)
+unsigned ri_group_num_consumers(const ri_group_t *grp)
 {
-  return vec->n_consumers;
+  return grp->n_consumers;
 }
 
 
-ri_info_t ri_vector_get_info(const ri_vector_t* vec)
+ri_info_t ri_group_get_info(const ri_group_t* grp)
 {
   return (ri_info_t) {
-    .data = vec->info.data,
-    .size = vec->info.size,
+    .data = grp->info.data,
+    .size = grp->info.size,
   };
 }
 
 
-void ri_vector_free_info(ri_vector_t* vec)
+void ri_group_free_info(ri_group_t* grp)
 {
-  if (vec->info.data) {
-    free(vec->info.data);
-    vec->info.data = NULL;
-    vec->info.size = 0;
+  if (grp->info.data) {
+    free(grp->info.data);
+    grp->info.data = NULL;
+    grp->info.size = 0;
   }
 }
 
 
-ri_producer_t* ri_vector_acquire_producer(ri_vector_t *vec, unsigned index)
+ri_producer_t* ri_group_acquire_producer(ri_group_t *grp, unsigned index)
 {
-  if (index >= vec->n_producers)
+  if (index >= grp->n_producers)
     return NULL;
 
-  ri_producer_t* producer = vec->producers[index];
+  ri_producer_t* producer = grp->producers[index];
 
   int r = ri_producer_acquire(producer);
 
@@ -458,12 +458,12 @@ ri_producer_t* ri_vector_acquire_producer(ri_vector_t *vec, unsigned index)
 }
 
 
-ri_consumer_t* ri_vector_acquire_consumer(ri_vector_t *vec, unsigned index)
+ri_consumer_t* ri_group_acquire_consumer(ri_group_t *grp, unsigned index)
 {
-  if (index >= vec->n_consumers)
+  if (index >= grp->n_consumers)
     return NULL;
 
-  ri_consumer_t* consumer = vec->consumers[index];
+  ri_consumer_t* consumer = grp->consumers[index];
 
   int r = ri_consumer_acquire(consumer);
 

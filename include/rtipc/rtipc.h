@@ -4,7 +4,7 @@
  *
  * This library provides wait-free message passing between two processes
  * using shared memory. Communication occurs through *channels* grouped
- * inside a @ref ri_vector_t.
+ * inside a @ref ri_group_t.
  *
  * Each channel is unidirectional, but the overall connection is typically
  * bidirectional:
@@ -71,16 +71,16 @@ typedef void (*ri_log_fn)(int priority,
 void ri_set_log_handler(ri_log_fn log_handler);
 
 /**
- * @typedef ri_vector_t
+ * @typedef ri_group_t
  * @brief Opaque handle to a channel vector connecting producer and consumer channels
  * mapped to the same shared memory region.
  */
-typedef struct ri_vector ri_vector_t;
+typedef struct ri_group ri_group_t;
 
 
 /**
  * @typedef ri_info_t
- * @brief Opaque user payload associated with a channel or vector.
+ * @brief Opaque user payload associated with a channel or group.
  *
  * This structure is used to transfer arbitrary user-defined data
  * from the server to the client.
@@ -130,7 +130,7 @@ typedef struct ri_channel_attr {
 
 
 /**
- * @typedef ri_vector_attr_t
+ * @typedef ri_group_attr_t
  * @brief Configuration parameters for creating a channel vector.
  *
  * This structure defines the set of producer and consumer channels that
@@ -138,7 +138,7 @@ typedef struct ri_channel_attr {
  * metadata. The configuration is provided at creation time and is not
  * modified by the vector implementation.
  */
-typedef struct ri_vector_attr {
+typedef struct ri_group_attr {
 
   /**
    * Array of consumer channel configurations.
@@ -164,14 +164,14 @@ typedef struct ri_vector_attr {
    */
   ri_info_t info;
 
-} ri_vector_attr_t;
+} ri_group_attr_t;
 
 
 
 /**
  * @brief Creates a channel vector from configuration.
  *
- * Builds a @ref ri_vector_t based on the channel layout described in
+ * Builds a @ref ri_group_t based on the channel layout described in
  * @p config.
  *
  * This function is typically used on the client side when connection
@@ -180,47 +180,47 @@ typedef struct ri_vector_attr {
  * @param vattr Pointer to a static vector configuration
  *
  */
-ri_vector_t* ri_vector_new(const ri_vector_attr_t *vattr);
+ri_group_t* ri_group_new(const ri_group_attr_t *gattr);
 
 
 /**
  * @brief Destroys a channel vector.
  *
- * Releases all channels still owned by the @ref ri_vector_t instance.
+ * Releases all channels still owned by the @ref ri_group_t instance.
  * Channels whose ownership has already been transferred via
- * @ref ri_vector_take_consumer or @ref ri_vector_take_producer are not
+ * @ref ri_group_take_consumer or @ref ri_group_take_producer are not
  * affected.
  *
  * After this call, @p vec becomes invalid and must not be used again.
  */
-void ri_vector_delete(ri_vector_t *vec);
+void ri_group_delete(ri_group_t *grp);
 
 
 /**
- * Returns the number of bytes required to serialize a channel vector.
+ * Returns the number of bytes required to serialize a channel group.
  *
- * Calculates the total serialized size of the given channel vector, including
+ * Calculates the total serialized size of the given channel group, including
  * all metadata and payload data needed for serialization.
  *
- * @param vec Pointer to the channel vector to measure.
- * @return The size in bytes required to serialize the channel vector.
+ * @param vec Pointer to the channel group to measure.
+ * @return The size in bytes required to serialize the channel group.
  */
-size_t ri_vector_serialize_size(const ri_vector_t *vec);
+size_t ri_group_serialize_size(const ri_group_t *grp);
 
 
 /**
- * Serializes a channel vector into the provided buffer.
+ * Serializes a channel group into the provided buffer.
  *
- * Encodes the given channel vector into a serialized representation written to
+ * Encodes the given channel group into a serialized representation written to
  * `req`. Any associated file descriptors are stored in `fds`, and the
  * number of file descriptors written is returned through `n_fds`.
  *
  * The caller must ensure that `req` points to a buffer large enough to
  * hold the serialized data, typically determined by
- * `ri_vector_serialize_size()`.
+ * `ri_group_serialize_size()`.
  *
- * @param vec    Pointer to the channel vector to serialize.
- * @param req    Output buffer receiving the serialized channel vector data.
+ * @param grp    Pointer to the channel group to serialize.
+ * @param req    Output buffer receiving the serialized channel group data.
  * @param size   Size of the output buffer in bytes.
  * @param fds    Array receiving any associated file descriptors.
  * @param n_fds  Input/output parameter. On input, contains the capacity of
@@ -229,58 +229,58 @@ size_t ri_vector_serialize_size(const ri_vector_t *vec);
  *
  * @return 0 on success, or a negative error code on failure.
  */
-int ri_vector_serialize(const ri_vector_t *vec, void* req, size_t size, int fds[], unsigned *n_fds);
+int ri_group_serialize(const ri_group_t *grp, void* req, size_t size, int fds[], unsigned *n_fds);
 
 
 /**
- * Deserializes a channel vector from a serialized buffer.
+ * Deserializes a channel group from a serialized buffer.
  *
- * Reconstructs a channel vector from the serialized data contained in
+ * Reconstructs a channel group from the serialized data contained in
  * `req`. Any associated file descriptors are read from `fds`, and the
  * number of file descriptors consumed is returned through `n_fds`.
  *
  * On success, ownership of all file descriptors in `fds` is transferred
- * to the newly created channel vector. Any unused file descriptors are
+ * to the newly created channel group. Any unused file descriptors are
  * closed internally, and all entries in `fds` are set to `-1`.
  *
- * @param req    Pointer to the serialized channel vector data.
+ * @param req    Pointer to the serialized channel group data.
  * @param size   Size of the serialized data buffer in bytes.
  * @param fds    Array containing associated file descriptors.
  * @param n_fds  Input/output parameter. On input, contains the number of
  *                available file descriptors in `fds`. On output, contains
  *                the number of file descriptors consumed.
  *
- * @return A newly allocated channel vector on success, or NULL on failure.
+ * @return A newly allocated channel group on success, or NULL on failure.
  */
-ri_vector_t* ri_vector_deserialize(const void* req, size_t size, int fds[], unsigned *n_fds);
+ri_group_t* ri_group_deserialize(const void* req, size_t size, int fds[], unsigned *n_fds);
 
 /**
- * @brief Returns the user-defined metadata associated with the vector.
+ * @brief Returns the user-defined metadata associated with the group.
  *
  * Retrieves the application-specific information previously attached to
- * the vector instance.
+ * the group instance.
  *
- * @param vec Pointer to the vector.
- * @return The metadata associated with the vector.
+ * @param grp Pointer to the group.
+ * @return The metadata associated with the group.
  */
-ri_info_t ri_vector_info(const ri_vector_t *vec);
+ri_info_t ri_group_info(const ri_group_t *grp);
 
 /**
  * @brief Get the number of consumer channels.
  *
- * @param vec Pointer to the vector.
+ * @param grp Pointer to the group.
  * @return The number of consumer channels.
  */
-unsigned ri_vector_num_consumers(const ri_vector_t *vec);
+unsigned ri_group_num_consumers(const ri_group_t *grp);
 
 
 /**
  * @brief Get the number of producer channels.
  *
- * @param vec Pointer to the vector.
+ * @param grp Pointer to the group.
  * @return The number of producer channels.
  */
-unsigned ri_vector_num_producers(const ri_vector_t *vec);
+unsigned ri_group_num_producers(const ri_group_t *grp);
 
 
 /**
@@ -293,16 +293,16 @@ typedef struct ri_consumer ri_consumer_t;
 
 
 /**
- * @brief Transfer ownership of a consumer channel from the vector to the caller.
+ * @brief Transfer ownership of a consumer channel from the group to the caller.
  *
- * Removes the consumer at the specified index from the vector and transfers
+ * Removes the consumer at the specified index from the group and transfers
  * ownership to the caller, who becomes responsible for its lifetime.
  *
- * @param vec   Pointer to the vector containing consumer channels.
+ * @param grp   Pointer to the group containing consumer channels.
  * @param index Index of the consumer channel to take.
  * @return Pointer to the consumer on success; NULL on error.
  */
-ri_consumer_t* ri_vector_acquire_consumer(ri_vector_t *vec, unsigned index);
+ri_consumer_t* ri_group_acquire_consumer(ri_group_t *grp, unsigned index);
 
 
 /**
@@ -461,16 +461,16 @@ typedef struct ri_producer ri_producer_t;
 
 
 /**
- * @brief Transfer ownership of a producer channel from the vector to the caller.
+ * @brief Transfer ownership of a producer channel from the group to the caller.
  *
- * Removes the producer at the specified index from the vector and transfers
+ * Removes the producer at the specified index from the group and transfers
  * ownership to the caller, who becomes responsible for its lifetime.
  *
- * @param vec   Pointer to the vector containing producer channels.
+ * @param grp   Pointer to the group containing producer channels.
  * @param index Index of the producer channel to take.
  * @return Pointer to the producer on success; NULL on error.
  */
-ri_producer_t* ri_vector_acquire_producer(ri_vector_t *vec, unsigned index);
+ri_producer_t* ri_group_acquire_producer(ri_group_t *grp, unsigned index);
 
 
 /**

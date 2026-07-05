@@ -76,24 +76,24 @@ static int server_send_response(int socket, int32_t result)
 }
 
 
-static ri_vector_t* request_to_vector(ri_uxmsg_t *req)
+static ri_group_t* request_to_group(ri_uxmsg_t *req)
 {
   size_t size;
   unsigned n_fds;
   const void *data = ri_uxmsg_data(req, &size);
   int *fds = ri_uxmsg_fds(req, &n_fds);
 
-  ri_vector_t *vec = ri_vector_deserialize(data, size, fds, &n_fds);
-  if (!vec) {
-    LOG_ERR("ri_vector_deserialize failed");
+  ri_group_t *grp = ri_group_deserialize(data, size, fds, &n_fds);
+  if (!grp) {
+    LOG_ERR("ri_group_deserialize failed");
     return NULL;
   }
 
-  return vec;
+  return grp;
 }
 
 
-ri_vector_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user_data)
+ri_group_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user_data)
 {
   ri_uxmsg_t *req = ri_uxmsg_receive(socket);
   if (!req) {
@@ -101,7 +101,7 @@ ri_vector_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user
     goto fail_receive;
   }
 
-  ri_vector_t *vec = request_to_vector(req);
+  ri_group_t *vec = request_to_group(req);
   if (!vec)
     goto fail_transfer;
 
@@ -119,7 +119,7 @@ ri_vector_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user
   return vec;
 
 fail_rejected:
-  ri_vector_delete(vec);
+  ri_group_delete(vec);
 fail_transfer:
   ri_uxmsg_delete(req);
 fail_receive:
@@ -129,7 +129,7 @@ fail_receive:
 }
 
 
-ri_vector_t* ri_server_accept(const ri_server_t* server, ri_filter_fn filter, void *user_data)
+ri_group_t* ri_server_accept(const ri_server_t* server, ri_filter_fn filter, void *user_data)
 {
   int socket = accept(server->sockfd, NULL, NULL);
   if (socket < 0) {
@@ -137,7 +137,7 @@ ri_vector_t* ri_server_accept(const ri_server_t* server, ri_filter_fn filter, vo
     return NULL;
   }
 
-  ri_vector_t *vec = ri_server_socket_accept(socket, filter, user_data);
+  ri_group_t *vec = ri_server_socket_accept(socket, filter, user_data);
 
   close(socket);
 
