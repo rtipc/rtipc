@@ -34,7 +34,6 @@ set(RTIPC_SRCS
   src/request.h
   src/request.c
   src/connect.c
-  src/client.c
 )
 
 

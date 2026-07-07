@@ -169,17 +169,6 @@ typedef struct ri_group_attr {
 
 
 /**
- * @typedef ri_attr_rsc_t
- */
-typedef struct ri_group_data ri_group_data_t;
-
-
-int ri_group_data_new(ri_group_data_t *rsc, unsigned n_consumers, unsigned n_producers);
-int ri_group_data_from_attr(ri_group_data_t *grp_data, const ri_group_attr_t *attr);
-void ri_group_data_delete(ri_group_data_t *grp_data);
-
-
-/**
  * @brief Creates a channel vector from configuration.
  *
  * Builds a @ref ri_group_t based on the channel layout described in
