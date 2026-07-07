@@ -29,14 +29,14 @@ static void server_delete(server_t* server)
 
 static void server_print_info(const server_t* server)
 {
-  ri_info_t info = ri_consumer_info(server->command);
-  LOG_INF("command name = %s", (const char*)info.data);
+  //ri_info_t info = ri_consumer_info(server->command);
+  //LOG_INF("command name = %s", (const char*)info.data);
 
-  info = ri_producer_info(server->response);
-  LOG_INF("response name = %s", (const char*)info.data);
+  //info = ri_producer_info(server->response);
+  //LOG_INF("response name = %s", (const char*)info.data);
 
-  info = ri_producer_info(server->event);
-  LOG_INF("event name = %s", (const char*)info.data);
+  //info = ri_producer_info(server->event);
+  //LOG_INF("event name = %s", (const char*)info.data);
 
 }
 

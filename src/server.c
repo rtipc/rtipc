@@ -9,6 +9,8 @@
 #include <sys/un.h>
 
 #include "rtipc/rtipc.h"
+#include "request.h"
+#include "attr.h"
 #include "rtipc/connect.h"
 #include "rtipc/log.h"
 #include "unix.h"
@@ -101,12 +103,13 @@ ri_group_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user_
     goto fail_receive;
   }
 
-  ri_group_t *vec = request_to_group(req);
-  if (!vec)
+  ri_group_t *grp = request_to_group(req);
+  if (!grp)
     goto fail_transfer;
 
   if (filter) {
-    if (!filter(vec, user_data)) {
+    ri_group_attr_t attr = ri_group_attr(grp);
+    if (!filter(&attr, user_data)) {
       LOG_INF("server rejected request");
       goto fail_rejected;
     }
@@ -116,10 +119,10 @@ ri_group_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user_
 
   ri_uxmsg_delete(req);
 
-  return vec;
+  return grp;
 
 fail_rejected:
-  ri_group_delete(vec);
+  ri_group_delete(grp);
 fail_transfer:
   ri_uxmsg_delete(req);
 fail_receive:

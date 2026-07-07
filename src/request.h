@@ -4,6 +4,6 @@
 
 size_t ri_request_calc_size(const ri_group_attr_t *vattr);
 
-ri_group_attr_t ri_request_parse(const void *req, size_t size, ri_channel_attr_t **attrs);
+int ri_request_parse(ri_group_data_t *attr, const void *req_data, size_t size);
 
-int ri_request_write(const ri_group_attr_t* vattr, void *req, size_t size);
+int ri_request_write(const ri_group_attr_t* grp_attr, void *req_data, size_t size);

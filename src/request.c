@@ -5,7 +5,8 @@
 #include <string.h>
 #include <errno.h>
 
-#include "rtipc/rtipc.h"
+
+#include "attr.h"
 #include "rtipc/log.h"
 #include "channel.h"
 #include "header.h"
@@ -23,7 +24,6 @@ typedef struct request_reader {
   const void *data;
   size_t size;
   size_t offset;
-  size_t offset_info;
 } request_reader_t;
 
 
@@ -83,18 +83,6 @@ static int request_read(request_reader_t *reader, void *dst, size_t size)
 }
 
 
-static const void* request_get_info(request_reader_t *reader, size_t size)
-{
-  if (reader->offset_info + size > reader->size)
-    return NULL;
-
-  const void* data = cmem_offset(reader->data, reader->offset_info);
-
-  reader->offset_info += size;
-
-  return data;
-}
-
 
 static int request_write_channel(request_writer_t *writer, const ri_channel_attr_t *attr)
 {
@@ -129,19 +117,10 @@ static int request_read_channel(request_reader_t *reader, ri_channel_attr_t *att
   if (r < 0)
     return -r;
 
-  ri_info_t info = { .size = entry.info_size };
-
-  if (info.size > 0) {
-    info.data = request_get_info(reader, info.size);
-
-    if (!info.data)
-      return -1;
-  }
-
   *attr = (ri_channel_attr_t) {
       .add_msgs = entry.add_msgs,
       .msg_size = entry.msg_size,
-      .info = info,
+      .info.size = entry.info_size,
       .eventfd = entry.eventfd,
   };
 
@@ -179,11 +158,55 @@ size_t ri_request_calc_size(const ri_group_attr_t *config)
 }
 
 
-ri_group_attr_t ri_request_parse(const void *req, size_t size, ri_channel_attr_t **attrs)
+static void* read_info(request_reader_t *reader, void *mem, size_t size)
 {
-  if (!attrs) {
-    goto fail_args;
+  int r = request_read(reader, mem, size);
+  if (r < 0)
+    return NULL;
+
+  size = ri_info_align(size);
+  return mem_offset(mem, size);
+}
+
+
+static int read_infos(request_reader_t *reader, ri_group_data_t *rsc)
+{
+  void *mem = rsc->mem_infos;
+
+  if (rsc->info.size > 0) {
+    rsc->info.data = mem;
+    mem = read_info(reader, mem, rsc->info.size);
+    if (!mem)
+      return -1;
   }
+
+  for (unsigned i = 0; i < rsc->n_consumers; i++) {
+    ri_channel_attr_t *attr = &rsc->consumers[i];
+    if (attr->info.size > 0) {
+      attr->info.data = mem;
+      mem = read_info(reader, mem, attr->info.size);
+      if (!mem)
+        return -1;
+    }
+  }
+
+  for (unsigned i = 0; i < rsc->n_producers; i++) {
+    ri_channel_attr_t *attr = &rsc->producers[i];
+    if (attr->info.size > 0) {
+      attr->info.data = mem;
+      mem = read_info(reader, mem, attr->info.size);
+      if (!mem)
+        return -1;
+    }
+  }
+  return 0;
+}
+
+
+int ri_request_parse(ri_group_data_t *grp_data, const void *req, size_t size)
+{
+  int r = -ENOMEM;
+  *grp_data = (ri_group_data_t) { 0 };
 
   request_reader_t reader = {
     .data = req,
@@ -192,95 +215,83 @@ ri_group_attr_t ri_request_parse(const void *req, size_t size, ri_channel_attr_t
 
   ri_request_header_t header;
 
-  int r = request_read(&reader, &header, sizeof(header));
+  r = request_read(&reader, &header, sizeof(header));
 
   if (r < 0) {
     LOG_ERR("request too small (%zu) for header", size);
-    goto fail_parse;
+    goto fail_header;
   }
 
   r = ri_request_header_validate(&header);
 
   if (r < 0) {
     LOG_ERR("ri_request_header_validate failed");
-    goto fail_parse;
+    goto fail_header;
   }
 
-
-  uint32_t vec_info_size;
-  r = request_read(&reader, &vec_info_size, sizeof(vec_info_size));
+  uint32_t group_info_size;
+  r = request_read(&reader, &group_info_size, sizeof(group_info_size));
 
   if (r < 0) {
     LOG_ERR("request too small (%zu) for vec_info_size", size);
-    goto fail_parse;
+    goto fail_header;
   }
 
 
   uint32_t n_consumers;
   r = request_read(&reader, &n_consumers, sizeof(n_consumers));
-
   if (r < 0) {
     LOG_ERR("request too small (%zu) for num_consumers", size);
-    goto fail_parse;
+    goto fail_header;
   }
 
   uint32_t n_producers;
   r = request_read(&reader, &n_producers, sizeof(n_producers));
-
   if (r < 0) {
     LOG_ERR("request too small (%zu) for num_producers", size);
-    goto fail_parse;
+    goto fail_header;
   }
 
-  reader.offset_info = reader.offset + (n_producers + n_consumers) * sizeof(entry_t);
-
-  ri_info_t vec_info = {
-    .size = vec_info_size,
-  };
-
-  if (vec_info_size > 0) {
-      vec_info.data = request_get_info(&reader, vec_info_size);
-
-    if (!vec_info.data) {
-      LOG_ERR("messsage too small (%zu) for vector info", size);
-      goto fail_parse;
-    }
+  r = ri_group_data_new(grp_data, n_consumers, n_producers);
+  if (r) {
+      goto fail_header;
   }
 
-  ri_channel_attr_t *channels = calloc(n_consumers + n_producers + 2, sizeof(ri_channel_attr_t));
-  if (!channels) {
-    goto fail_alloc;
-  }
+  grp_data->info.size = group_info_size;
 
-  ri_channel_attr_t *consumers = &channels[0];
-  ri_channel_attr_t *producers = &channels[n_consumers + 1];
 
   for (unsigned i = 0; i < n_consumers; i++) {
-    r = request_read_channel(&reader, &consumers[i]);
+    r = request_read_channel(&reader, &grp_data->consumers[i]);
     if (r < 0)
-      goto fail_channel;
+      goto fail_channels;
   }
 
   for (unsigned i = 0; i < n_producers; i++) {
-    r = request_read_channel(&reader, &producers[i]);
+    r = request_read_channel(&reader, &grp_data->producers[i]);
     if (r < 0)
-      goto fail_channel;
+      goto fail_channels;
   }
 
-  *attrs = channels;
+  ri_group_attr_t attr = ri_group_data_attr(grp_data);
 
-  return (ri_group_attr_t) {
-         .consumers = consumers,
-         .producers = producers,
-         .info = vec_info,
-         };
+  size_t info_size = ri_attr_calc_info_size(&attr);
 
-fail_channel:
-  free(channels);
-fail_parse:
-fail_alloc:
-fail_args:
-  return (ri_group_attr_t) {.consumers = NULL, .producers = NULL};
+  grp_data->mem_infos = malloc(info_size);
+  if (!grp_data->mem_infos) {
+      r = -ENOMEM;
+      goto fail_channels;
+  }
+
+  r = read_infos(&reader, grp_data);
+  if (r < 0)
+    goto fail_channels;
+
+  return 0;
+
+fail_channels:
+    ri_group_data_delete(grp_data);
+fail_header:
+  return r;
 }
 
 

@@ -10,6 +10,8 @@ option(RTIPC_BUILD_EXAMPLES "Build examples" OFF)
 
 set(RTIPC_SRCS
   src/log.c
+  src/attr.c
+  src/attr.h
   src/shm.c
   src/shm.h
   src/queue.c
@@ -29,6 +31,7 @@ set(RTIPC_SRCS
   src/header.h
   src/unix.c
   src/unix.h
+  src/request.h
   src/request.c
   src/server.c
   src/client.c

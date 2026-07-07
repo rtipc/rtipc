@@ -1,7 +1,6 @@
 #include "mem_utils.h"
 
 #include <errno.h>
-#include <stdalign.h>
 #include <stdatomic.h>
 #include <stdio.h>
 

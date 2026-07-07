@@ -169,6 +169,17 @@ typedef struct ri_group_attr {
 
 
 /**
+ * @typedef ri_attr_rsc_t
+ */
+typedef struct ri_group_data ri_group_data_t;
+
+
+int ri_group_data_new(ri_group_data_t *rsc, unsigned n_consumers, unsigned n_producers);
+int ri_group_data_from_attr(ri_group_data_t *grp_data, const ri_group_attr_t *attr);
+void ri_group_data_delete(ri_group_data_t *grp_data);
+
+
+/**
  * @brief Creates a channel vector from configuration.
  *
  * Builds a @ref ri_group_t based on the channel layout described in
@@ -195,6 +206,7 @@ ri_group_t* ri_group_new(const ri_group_attr_t *gattr);
  */
 void ri_group_delete(ri_group_t *grp);
 
+ri_group_attr_t ri_group_attr(const ri_group_t *grp);
 
 /**
  * Returns the number of bytes required to serialize a channel group.
@@ -427,30 +439,6 @@ int ri_consumer_take_eventfd(ri_consumer_t *consumer);
 
 
 /**
- * @brief Returns the user-defined metadata associated with the consumer channel.
- *
- * Retrieves the application-specific information previously attached to
- * the consumer instance.
- *
- * @param consumer Pointer to the consumer channel.
- * @return The metadata associated with the consumer channel.
- */
-ri_info_t ri_consumer_info(const ri_consumer_t *consumer);
-
-
-/**
- * @brief Delete the user-defined metadata associated with a consumer channel.
- *
- * Frees any application-specific information attached to the consumer.
- * This should be called when the metadata is no longer needed to avoid
- * unnecessary memory usage.
- *
- * @param consumer Pointer to the consumer.
- */
-void ri_consumer_free_info(ri_consumer_t *consumer);
-
-
-/**
  * @typedef ri_producer_t
  * @brief Handle for sending messages to a peer process.
  *
@@ -651,30 +639,6 @@ int ri_producer_cache_enable(ri_producer_t *producer);
  * shared memory message slot again.
  */
 void ri_producer_cache_disable(ri_producer_t *producer);
-
-
-/**
- * @brief Returns the user-defined metadata associated with the producer channel.
- *
- * Retrieves the application-specific information previously attached to
- * the producer instance.
- *
- * @param producer Pointer to the producer channel.
- * @return The metadata associated with the producer channel.
- */
-ri_info_t ri_producer_info(const ri_producer_t *producer);
-
-
-/**
- * @brief Delete the user-defined metadata associated with a producer channel.
- *
- * Frees any application-specific information attached to the producer.
- * This should be called when the metadata is no longer needed to avoid
- * unnecessary memory usage.
- *
- * @param producer Pointer to the producer.
- */
-void ri_producer_free_info(ri_producer_t *producer);
 
 
 
