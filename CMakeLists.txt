@@ -23,8 +23,8 @@ set(RTIPC_SRCS
   src/mem_utils.c
   src/mem_utils.h
   src/index.h
-  src/vector.c
-  src/vector.h
+  src/group.c
+  src/group.h
   src/channel.c
   src/channel.h
   src/header.c
