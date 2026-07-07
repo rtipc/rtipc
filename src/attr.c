@@ -71,32 +71,33 @@ static void* copy_attrs(ri_channel_attr_t *dest, const ri_channel_attr_t *src, u
 }
 
 
-int ri_group_data_new(ri_group_data_t *rsc, unsigned n_consumers, unsigned n_producers)
+int ri_group_data_new(ri_group_data_t *grp_data, unsigned n_consumers, unsigned n_producers)
 {
-  *rsc = (ri_group_data_t){
+  *grp_data = (ri_group_data_t){
     .n_consumers = n_consumers,
     .n_producers = n_producers,
   };
 
-  if (rsc->n_consumers > 0) {
-    rsc->consumers = calloc(rsc->n_consumers + 1, sizeof(ri_channel_attr_t));
+  if (grp_data->n_consumers > 0) {
+    grp_data->consumers = calloc(grp_data->n_consumers + 1, sizeof(ri_channel_attr_t));
 
-    if (!rsc->consumers) {
+    if (!grp_data->consumers) {
       goto fail_consumers;
     }
   }
 
-  if (rsc->n_producers > 0) {
-    rsc->producers = calloc(rsc->n_producers + 1, sizeof(ri_channel_attr_t));
+  if (grp_data->n_producers > 0) {
+    grp_data->producers = calloc(grp_data->n_producers + 1, sizeof(ri_channel_attr_t));
 
-    if (!rsc->producers) {
+    if (!grp_data->producers) {
       goto fail_producers;
     }
   }
 
+  return 0;
 fail_producers:
-  if (rsc->consumers)
-    free(rsc->consumers);
+  if (grp_data->consumers)
+    free(grp_data->consumers);
 fail_consumers:
   return -ENOMEM;
 }
@@ -135,37 +136,38 @@ fail_alloc:
 }
 
 
-void ri_group_data_delete(ri_group_data_t *rsc) {
-  if (rsc->mem_infos) {
-    free(rsc->mem_infos);
-    rsc->mem_infos = NULL;
+void ri_group_data_delete(ri_group_data_t *grp_data)
+{
+  if (grp_data->mem_infos) {
+    free(grp_data->mem_infos);
+    grp_data->mem_infos = NULL;
   }
 
-  if (rsc->consumers) {
-    free(rsc->consumers);
-    rsc->consumers = NULL;
+  if (grp_data->consumers) {
+    free(grp_data->consumers);
+    grp_data->consumers = NULL;
   }
 
-  if (rsc->producers) {
-    free(rsc->producers);
-    rsc->producers = NULL;
+  if (grp_data->producers) {
+    free(grp_data->producers);
+    grp_data->producers = NULL;
   }
 
-  rsc->consumers = NULL;
-  rsc->producers = NULL;
-  rsc->info.data = NULL;
+  grp_data->consumers = NULL;
+  grp_data->producers = NULL;
+  grp_data->info.data = NULL;
 
-  rsc->n_consumers = 0;
-  rsc->n_producers = 0;
-  rsc->info.size = 0;
+  grp_data->n_consumers = 0;
+  grp_data->n_producers = 0;
+  grp_data->info.size = 0;
 }
 
 
-ri_group_attr_t ri_group_data_attr(const ri_group_data_t *rsc)
+ri_group_attr_t ri_group_data_attr(const ri_group_data_t *grp_data)
 {
   return (ri_group_attr_t){
-    .consumers = rsc->consumers,
-    .producers = rsc->producers,
-    .info = rsc->info,
+    .consumers = grp_data->consumers,
+    .producers = grp_data->producers,
+    .info = grp_data->info,
   };
 }
