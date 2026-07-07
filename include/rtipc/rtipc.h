@@ -180,7 +180,7 @@ typedef struct ri_group_attr {
  * @param vattr Pointer to a static vector configuration
  *
  */
-ri_group_t* ri_group_new(const ri_group_attr_t *gattr);
+ri_group_t* ri_group_from_attr(const ri_group_attr_t *gattr);
 
 
 /**

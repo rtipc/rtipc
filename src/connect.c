@@ -256,7 +256,7 @@ fail_alloc:
 
 ri_group_t* ri_client_socket_connect(int socket, const ri_group_attr_t *vattr)
 {
-  ri_group_t *grp = ri_group_new(vattr);
+  ri_group_t *grp = ri_group_from_attr(vattr);
   if (!grp) {
     LOG_ERR("ri_group_new failed");
     goto fail_grp;
