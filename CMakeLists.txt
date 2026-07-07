@@ -33,7 +33,7 @@ set(RTIPC_SRCS
   src/unix.h
   src/request.h
   src/request.c
-  src/server.c
+  src/connect.c
   src/client.c
 )
 
