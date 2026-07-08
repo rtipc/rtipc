@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#define GROUP_INFO "rpc group"
 #define COMMAND_INFO "rpc command"
 #define RESPONSE_INFO "rpc response"
 #define EVENT_INFO "rpc event"

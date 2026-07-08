@@ -103,34 +103,36 @@ fail_consumers:
 }
 
 
-int ri_group_data_from_attr(ri_group_data_t *grp_data, const ri_group_attr_t *attr)
+int ri_group_data_from_attr(ri_group_data_t *data, const ri_group_attr_t *attr)
 {
   unsigned n_consumers = ri_count_channels(attr->consumers);
   unsigned n_producers = ri_count_channels(attr->producers);
 
-  int r = ri_group_data_new(grp_data, n_consumers, n_producers);
+  int r = ri_group_data_new(data, n_consumers, n_producers);
   if (r < 0)
     goto fail_alloc;
 
   size_t info_size = ri_attr_calc_info_size(attr);
 
   if (info_size > 0) {
-    grp_data->mem_infos = malloc(info_size);
-    if (!grp_data->mem_infos) {
+    data->mem_infos = malloc(info_size);
+    if (!data->mem_infos) {
       goto fail_infos;
     }
   }
 
-  void *infos = grp_data->mem_infos;
+  void *infos = data->mem_infos;
 
-  infos = copy_attrs(grp_data->consumers, attr->consumers, grp_data->n_consumers, infos);
+  infos = ri_info_copy(infos, &data->info, &attr->info);
 
-  copy_attrs(grp_data->producers, attr->producers, grp_data->n_producers, infos);
+  infos = copy_attrs(data->consumers, attr->consumers, data->n_consumers, infos);
+
+  copy_attrs(data->producers, attr->producers, data->n_producers, infos);
 
   return 0;
 
 fail_infos:
-  ri_group_data_delete(grp_data);
+  ri_group_data_delete(data);
 fail_alloc:
   return -ENOMEM;
 }

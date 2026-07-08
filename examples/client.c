@@ -25,6 +25,12 @@ const ri_channel_attr_t server2client_channels[] = {
 };
 
 
+const ri_group_attr_t grp_attr = {
+    .consumers = server2client_channels,
+    .producers = client2server_channels,
+    .info = { .data = GROUP_INFO, .size = sizeof(GROUP_INFO) }
+};
+
 typedef struct client {
     ri_producer_t *command;
     ri_consumer_t *response;
@@ -104,31 +110,30 @@ int event_listen(void *arg)
 
       msg_event_print(ri_consumer_msg(client->event));
     }
-
   }
 
   return 0;
 }
 
-static client_t* client_new(const char *path, const ri_group_attr_t *config)
+static client_t* client_new(const char *path, const ri_group_attr_t *grp_attr)
 {
-  ri_group_t *vec = ri_client_connect(path, config);
-  if (!vec)
+  ri_group_t *grp = ri_client_connect(path, grp_attr);
+  if (!grp)
     goto fail_connect;
 
   client_t *client = calloc(1, sizeof(client_t));
   if (!client)
     goto fail_alloc;
 
-  client->command = ri_group_acquire_producer(vec, 0);
+  client->command = ri_group_acquire_producer(grp, 0);
   if (!client->command)
     goto fail_channel;
 
-  client->response = ri_group_acquire_consumer(vec, 0);
+  client->response = ri_group_acquire_consumer(grp, 0);
   if (!client->response)
     goto fail_channel;
 
-  client->event = ri_group_acquire_consumer(vec, 1);
+  client->event = ri_group_acquire_consumer(grp, 1);
   if (!client->event)
     goto fail_channel;
 
@@ -139,8 +144,7 @@ static client_t* client_new(const char *path, const ri_group_attr_t *config)
     goto fail_thread;
   }
 
-
-  ri_group_delete(vec);
+  ri_group_delete(grp);
 
   return client;
 
@@ -148,7 +152,7 @@ fail_thread:
 fail_channel:
   client_delete(client);
 fail_alloc:
-  ri_group_delete(vec);
+  ri_group_delete(grp);
 fail_connect:
   return NULL;
 }
@@ -195,12 +199,9 @@ void client_run(client_t *client, const msg_command_t *cmds)
 
 int main()
 {
-  const ri_group_attr_t vattr = {
-    .consumers = server2client_channels,
-    .producers = client2server_channels,
-  };
 
-  client_t *client = client_new("rtipc.sock", &vattr);
+
+  client_t *client = client_new("rtipc.sock", &grp_attr);
   if (!client) {
     return -1;
   }

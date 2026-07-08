@@ -256,9 +256,9 @@ fail_alloc:
 }
 
 
-ri_group_t* ri_client_socket_connect(int socket, const ri_group_attr_t *vattr)
+ri_group_t* ri_client_socket_connect(int socket, const ri_group_attr_t *grp_attr)
 {
-  ri_group_t *grp = ri_group_from_attr(vattr);
+  ri_group_t *grp = ri_group_from_attr(grp_attr);
   if (!grp) {
     LOG_ERR("ri_group_new failed");
     goto fail_grp;
@@ -290,7 +290,7 @@ fail_grp:
 }
 
 
-ri_group_t* ri_client_connect(const char *path, const ri_group_attr_t *vattr)
+ri_group_t* ri_client_connect(const char *path, const ri_group_attr_t *grp_attr)
 {
   int socket = connect_path(path);
 
@@ -298,7 +298,7 @@ ri_group_t* ri_client_connect(const char *path, const ri_group_attr_t *vattr)
     return NULL;
   }
 
-  ri_group_t *grp = ri_client_socket_connect(socket, vattr);
+  ri_group_t *grp = ri_client_socket_connect(socket, grp_attr);
 
   close(socket);
 

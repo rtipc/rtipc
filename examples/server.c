@@ -27,17 +27,27 @@ static void server_delete(server_t* server)
   free(server);
 }
 
-static void server_print_info(const server_t* server)
+static bool server_print_info(const ri_group_attr_t* attr, unsigned n_consumers, unsigned n_producers, void *userdata)
 {
-  //ri_info_t info = ri_consumer_info(server->command);
-  //LOG_INF("command name = %s", (const char*)info.data);
 
-  //info = ri_producer_info(server->response);
-  //LOG_INF("response name = %s", (const char*)info.data);
+  if (n_consumers != 1) {
+    LOG_ERR("unexpected number of conusmers=%d", n_consumers);
+    return false;
+  }
 
-  //info = ri_producer_info(server->event);
-  //LOG_INF("event name = %s", (const char*)info.data);
+  if (n_producers != 2) {
+    LOG_ERR("unexpected number of producers=%d", n_producers);
+    return false;
+  }
 
+  LOG_INF("group name = %s", (const char*)attr->info.data);
+
+  LOG_INF("command name = %s", (const char*)attr->consumers[0].info.data);
+
+  LOG_INF("response name = %s", (const char*)attr->producers[0].info.data);
+
+  LOG_INF("event name = %s", (const char*)attr->producers[1].info.data);
+  return true;
 }
 
 static server_t* server_new(const char *path)
@@ -46,11 +56,11 @@ static server_t* server_new(const char *path)
   if (!ri_server)
     goto fail_server;
 
-  ri_group_t *vec = ri_server_accept(ri_server, NULL, NULL);
+  ri_group_t *grp = ri_server_accept(ri_server, server_print_info, ri_server);
 
   ri_server_delete(ri_server);
 
-  if (!vec)
+  if (!grp)
     goto fail_server;
 
   server_t *server = calloc(1, sizeof(server_t));
@@ -58,28 +68,26 @@ static server_t* server_new(const char *path)
   if (!server)
     goto fail_alloc;
 
-  server->command = ri_group_acquire_consumer(vec, 0);
+  server->command = ri_group_acquire_consumer(grp, 0);
   if (!server->command)
     goto fail_channel;
 
-  server->response = ri_group_acquire_producer(vec, 0);
+  server->response = ri_group_acquire_producer(grp, 0);
   if (!server->response)
     goto fail_channel;
 
-  server->event = ri_group_acquire_producer(vec, 1);
+  server->event = ri_group_acquire_producer(grp, 1);
   if (!server->event)
     goto fail_channel;
 
-  ri_group_delete(vec);
-
-  server_print_info(server);
+  ri_group_delete(grp);
 
   return server;
 
 fail_channel:
   server_delete(server);
 fail_alloc:
-   ri_group_delete(vec);
+   ri_group_delete(grp);
 fail_server:
   return NULL;
 }

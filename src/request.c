@@ -259,7 +259,6 @@ int ri_request_parse(ri_group_data_t *grp_data, const void *req, size_t size)
 
   grp_data->info.size = group_info_size;
 
-
   for (unsigned i = 0; i < n_consumers; i++) {
     r = request_read_channel(&reader, &grp_data->consumers[i]);
     if (r < 0)
@@ -295,13 +294,13 @@ fail_header:
 }
 
 
-int ri_request_write(const ri_group_attr_t* vattr, void *req, size_t size)
+int ri_request_write(const ri_group_attr_t* grp_attr, void *req, size_t size)
 {
   if (!size)
     goto fail;
 
-  uint32_t n_producers = ri_count_channels(vattr->producers);
-  uint32_t n_consumers = ri_count_channels(vattr->consumers);
+  uint32_t n_producers = ri_count_channels(grp_attr->producers);
+  uint32_t n_consumers = ri_count_channels(grp_attr->consumers);
 
   request_writer_t writer = {
     .size = size,
@@ -315,9 +314,9 @@ int ri_request_write(const ri_group_attr_t* vattr, void *req, size_t size)
   if (r < 0)
     goto fail;
 
-  uint32_t vec_info = vattr->info.size;
+  uint32_t grp_info_size = grp_attr->info.size;
 
-  r = request_write(&writer, &vec_info, sizeof(vec_info));
+  r = request_write(&writer, &grp_info_size, sizeof(grp_info_size));
 
   if (r < 0)
     goto fail;
@@ -334,13 +333,13 @@ int ri_request_write(const ri_group_attr_t* vattr, void *req, size_t size)
 
   writer.offset_info = writer.offset + (n_producers + n_consumers) * sizeof(entry_t);
 
-  r = request_write_info(&writer, &vattr->info);
+  r = request_write_info(&writer, &grp_attr->info);
 
   if (r < 0)
     goto fail;
 
   for (unsigned i = 0 ; i < n_producers; i++) {
-    const ri_channel_attr_t *attr = &vattr->producers[i];
+    const ri_channel_attr_t *attr = &grp_attr->producers[i];
     r = request_write_channel(&writer, attr);
 
     if (r < 0)
@@ -348,7 +347,7 @@ int ri_request_write(const ri_group_attr_t* vattr, void *req, size_t size)
   }
 
   for (unsigned i = 0 ; i < n_consumers; i++) {
-    const ri_channel_attr_t *attr = &vattr->consumers[i];
+    const ri_channel_attr_t *attr = &grp_attr->consumers[i];
     r = request_write_channel(&writer, attr);
 
     if (r < 0)
