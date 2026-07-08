@@ -195,7 +195,7 @@ ri_group_t* ri_group_from_attr(const ri_group_attr_t *gattr);
  */
 void ri_group_delete(ri_group_t *grp);
 
-ri_group_attr_t ri_group_attr(const ri_group_t *grp);
+ri_group_attr_t ri_group_get_attr(const ri_group_t *grp);
 
 /**
  * Returns the number of bytes required to serialize a channel group.

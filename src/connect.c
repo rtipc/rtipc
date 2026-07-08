@@ -106,7 +106,7 @@ ri_group_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user_
     goto fail_transfer;
 
   if (filter) {
-    ri_group_attr_t attr = ri_group_attr(grp);
+    ri_group_attr_t attr = ri_group_get_attr(grp);
     unsigned n_consumers = ri_group_num_consumers(grp);
     unsigned n_producers = ri_group_num_producers(grp);
     if (!filter(&attr, n_consumers, n_producers, user_data)) {

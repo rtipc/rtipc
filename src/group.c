@@ -42,7 +42,7 @@ static int take_eventfd(unsigned idx, int fds[], unsigned n_fds)
 }
 
 
-ri_group_attr_t ri_group_attr(const ri_group_t *grp)
+ri_group_attr_t ri_group_get_attr(const ri_group_t *grp)
 {
   return ri_group_data_attr(&grp->data);
 }
