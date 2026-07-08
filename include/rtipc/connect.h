@@ -51,7 +51,7 @@ void ri_server_delete(ri_server_t* server);
  */
 int ri_server_socket(const ri_server_t* server);
 
-typedef bool (*ri_filter_fn)(const ri_group_attr_t* attr, void *user_data);
+typedef bool (*ri_filter_fn)(const ri_group_attr_t* attr, unsigned n_consumers, unsigned n_producers, void *user_data);
 
 /**
  * @brief Accept a client connection and constructs a channel vector.

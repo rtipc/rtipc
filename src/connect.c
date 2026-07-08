@@ -107,7 +107,9 @@ ri_group_t* ri_server_socket_accept(int socket, ri_filter_fn filter, void *user_
 
   if (filter) {
     ri_group_attr_t attr = ri_group_attr(grp);
-    if (!filter(&attr, user_data)) {
+    unsigned n_consumers = ri_group_num_consumers(grp);
+    unsigned n_producers = ri_group_num_producers(grp);
+    if (!filter(&attr, n_consumers, n_producers, user_data)) {
       LOG_INF("server rejected request");
       goto fail_rejected;
     }
