@@ -176,7 +176,7 @@ static int connect_path(const char *path)
   r = connect(sockfd, (struct sockaddr*)&addr, sizeof(addr));
   if (r < 0) {
     r = -errno;
-    LOG_ERR("connect failed errno=%u", errno);
+    LOG_ERR("connect to %s failed errno=%u", path, errno);
     goto fail_connect;
   }
 
