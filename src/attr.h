@@ -33,3 +33,7 @@ size_t ri_info_align(size_t size);
 size_t ri_attr_calc_info_size(const ri_group_attr_t *attr);
 
 ri_group_attr_t ri_group_data_attr(const ri_group_data_t *data);
+
+const ri_channel_attr_t* ri_group_data_get_consumer_attr(const ri_group_data_t *grp_data, unsigned index);
+
+const ri_channel_attr_t* ri_group_data_get_producer_attr(const ri_group_data_t *grp_data, unsigned index);

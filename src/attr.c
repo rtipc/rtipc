@@ -9,6 +9,64 @@
 #include "rtipc/rtipc.h"
 
 
+bool ri_info_equal(ri_info_t i0, ri_info_t i1)
+{
+  if (i0.size != i1.size)
+    return false;
+
+  /* both infos are empty */
+  if (i0.size == 0)
+    return true;
+
+  /* undefined */
+  if ((i0.data == NULL) || (i1.data == NULL))
+    return false;
+
+  return memcmp(i0.data, i1.data, i0.size) == 0;
+}
+
+
+bool ri_channel_attr_equal(const ri_channel_attr_t *c0, const ri_channel_attr_t *c1)
+{
+  bool r = ri_info_equal(c0->info, c1->info);
+
+  if (!r)
+    return false;
+
+  return (c0->msg_size == c1->msg_size)
+      && (c0->add_msgs == c1->add_msgs)
+      && (c0->eventfd  == c1->eventfd);
+}
+
+
+bool ri_group_attr_equal(const ri_group_attr_t *g0, const ri_group_attr_t *g1)
+{
+  bool r = ri_info_equal(g0->info, g1->info);
+
+  if (!r)
+    return false;
+
+  for (unsigned i = 0; i; i++) {
+    if ((g0->consumers[i].msg_size == 0) && (g1->consumers[i].msg_size == 0))
+      return true;
+    r = ri_channel_attr_equal(&g0->consumers[i], &g1->consumers[i]);
+
+    if (!r)
+      return false;
+  }
+
+  for (unsigned i = 0; i; i++) {
+    if ((g0->producers[i].msg_size == 0) && (g1->producers[i].msg_size == 0))
+      return true;
+    r = ri_channel_attr_equal(&g0->producers[i], &g1->producers[i]);
+
+    if (!r)
+      return false;
+  }
+
+  return false;
+}
+
 
 size_t ri_info_align(size_t size)
 {
@@ -172,4 +230,20 @@ ri_group_attr_t ri_group_data_attr(const ri_group_data_t *grp_data)
     .producers = grp_data->producers,
     .info = grp_data->info,
   };
+}
+
+const ri_channel_attr_t* ri_group_data_get_consumer_attr(const ri_group_data_t *grp_data, unsigned index)
+{
+  if (index >= grp_data->n_consumers)
+    return NULL;
+
+  return &grp_data->consumers[index];
+}
+
+const ri_channel_attr_t* ri_group_data_get_producer_attr(const ri_group_data_t *grp_data, unsigned index)
+{
+  if (index >= grp_data->n_producers)
+    return NULL;
+
+  return &grp_data->producers[index];
 }

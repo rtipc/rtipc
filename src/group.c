@@ -48,6 +48,16 @@ ri_group_attr_t ri_group_get_attr(const ri_group_t *grp)
 }
 
 
+const ri_channel_attr_t* ri_group_get_consumer_attr(const ri_group_t *grp, unsigned index)
+{
+  return ri_group_data_get_consumer_attr(&grp->data, index);
+}
+
+
+const ri_channel_attr_t* ri_group_get_producer_attr(const ri_group_t *grp, unsigned index)
+{
+  return ri_group_data_get_producer_attr(&grp->data, index);
+}
 
 
 static int collect_fds(const ri_group_t *grp, int fds[], unsigned n_fds) {

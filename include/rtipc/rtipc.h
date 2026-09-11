@@ -90,6 +90,7 @@ typedef struct ri_info {
   const void *data; /**< Pointer to read-only payload buffer */
 } ri_info_t;
 
+bool ri_info_equal(ri_info_t i0, ri_info_t i1);
 
 /**
  * @typedef ri_channel_attr_t
@@ -129,6 +130,8 @@ typedef struct ri_channel_attr {
 } ri_channel_attr_t;
 
 
+bool ri_channel_attr_equal(const ri_channel_attr_t *c0, const ri_channel_attr_t *c1);
+
 /**
  * @typedef ri_group_attr_t
  * @brief Configuration parameters for creating a channel vector.
@@ -167,6 +170,7 @@ typedef struct ri_group_attr {
 } ri_group_attr_t;
 
 
+bool ri_group_attr_equal(const ri_group_attr_t *g0, const ri_group_attr_t *g1);
 
 /**
  * @brief Creates a channel vector from configuration.
@@ -195,7 +199,34 @@ ri_group_t* ri_group_from_attr(const ri_group_attr_t *gattr);
  */
 void ri_group_delete(ri_group_t *grp);
 
+/**
+ * @brief Get the attributes of a group.
+ *
+ * @param grp Pointer to the group.
+ * @return The attributes of the group.
+ *
+ */
 ri_group_attr_t ri_group_get_attr(const ri_group_t *grp);
+
+/**
+ * @brief Get the attributes of a consumer channel.
+ *
+ * @param grp   Pointer to the group.
+ * @param index Index of the consumer channel.
+ * @return Pointer to the consumer channel attributes, or NULL if @p index is invalid.
+ *
+ */
+const ri_channel_attr_t* ri_group_get_consumer_attr(const ri_group_t *grp, unsigned index);
+
+/**
+ * @brief Get the attributes of a producer channel.
+ *
+ * @param grp   Pointer to the group.
+ * @param index Index of the producer channel.
+ * @return Pointer to the producer channel attributes, or NULL if @p index is invalid.
+ *
+ */
+const ri_channel_attr_t* ri_group_get_producer_attr(const ri_group_t *grp, unsigned index);
 
 /**
  * Returns the number of bytes required to serialize a channel group.
