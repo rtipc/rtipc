@@ -354,7 +354,7 @@ int ri_request_write(const ri_group_attr_t* grp_attr, void *req, size_t size)
       goto fail;
   }
 
-  return 0;
+  return writer.offset;
 
 fail:
   return -1;

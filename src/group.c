@@ -248,13 +248,15 @@ int ri_group_serialize(const ri_group_t *grp, void* req, size_t size, int fds[],
   if (r < 0)
     return r;
 
+  int written = r;
+
   r = collect_fds(grp, fds, *n_fds);
   if (r < 0)
     return r;
 
   *n_fds = r;
 
-  return 0;
+  return written;
 }
 
 
