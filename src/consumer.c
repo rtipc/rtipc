@@ -43,7 +43,7 @@ ri_consumer_queue_t* ri_consumer_queue_new(const ri_channel_attr_t *attr, ri_shm
 
   *consumer = (ri_consumer_queue_t) {
       .shm = shm,
-      .current = 0,
+      .current = RI_INDEX_INVALID,
   };
 
   void *ptr = ri_shm_ptr(shm, shm_offset);
@@ -83,23 +83,34 @@ int ri_consumer_queue_count_msgs(const ri_consumer_queue_t *consumer)
 
   ri_index_t next = ri_queue_tail_load(queue);
 
+  if (next == RI_INDEX_INVALID)
+    return 0;
+
   next &= RI_INDEX_MASK;
 
   if (!ri_queue_index_valid(queue, next))
     return -1;
 
-  for (unsigned cnt = 0; cnt < queue->n_msgs; cnt++) {
+  unsigned cnt;
+  for (cnt = 0; cnt < queue->n_msgs; cnt++) {
     next = ri_queue_chain_load(queue, next);
 
     if (next == RI_INDEX_INVALID)
       /* end of queue, no newer message available */
-      return cnt;
+      break;
 
     if (!ri_queue_index_valid(queue, next))
       return -1;
   }
 
-  return queue->n_msgs;
+  /* check again for overrun */
+  next = ri_queue_tail_load(queue);
+
+  if (!(next & RI_CONSUMED_FLAG) && (consumer->current != RI_INDEX_INVALID)) {
+    return queue->n_msgs - 1;
+  }
+
+  return cnt + 1;
 }
 
 ri_pop_result_t ri_consumer_queue_flush(ri_consumer_queue_t *consumer)

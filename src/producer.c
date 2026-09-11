@@ -222,6 +222,11 @@ int ri_producer_queue_count_msgs(const ri_producer_queue_t *producer)
 
   ri_index_t next = ri_queue_tail_load(queue);
 
+  /* overrun; queue is full */
+  if (!(next & RI_CONSUMED_FLAG) && !(next & RI_FIRST_FLAG)) {
+    return queue->n_msgs - 1;
+  }
+
   next &= RI_INDEX_MASK;
 
   if (!ri_queue_index_valid(queue, next))
