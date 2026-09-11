@@ -166,6 +166,11 @@ ri_pop_result_t ri_consumer_queue_pop(ri_consumer_queue_t *consumer)
     return (tail & RI_FIRST_FLAG) ? RI_POP_RESULT_SUCCESS : RI_POP_RESULT_DISCARDED;
   }
 
+  if (consumer->current == RI_INDEX_INVALID) {
+    /* consumed flag was set, but we don't have a message yet */
+    return RI_POP_RESULT_ERROR;
+  }
+
   /* try to get next message */
   ri_index_t next = ri_queue_chain_load(queue, consumer->current);
 
