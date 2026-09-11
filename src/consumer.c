@@ -77,6 +77,31 @@ void ri_consumer_queue_init_shm(const ri_consumer_queue_t *consumer)
 }
 
 
+int ri_consumer_queue_count_msgs(const ri_consumer_queue_t *consumer)
+{
+  const ri_queue_t *queue = &consumer->queue;
+
+  ri_index_t next = ri_queue_tail_load(queue);
+
+  next &= RI_INDEX_MASK;
+
+  if (!ri_queue_index_valid(queue, next))
+    return -1;
+
+  for (unsigned cnt = 0; cnt < queue->n_msgs; cnt++) {
+    next = ri_queue_chain_load(queue, next);
+
+    if (next == RI_INDEX_INVALID)
+      /* end of queue, no newer message available */
+      return cnt;
+
+    if (!ri_queue_index_valid(queue, next))
+      return -1;
+  }
+
+  return queue->n_msgs;
+}
+
 ri_pop_result_t ri_consumer_queue_flush(ri_consumer_queue_t *consumer)
 {
   ri_queue_t *queue = &consumer->queue;

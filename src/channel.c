@@ -264,6 +264,16 @@ void* ri_producer_msg(const ri_producer_t *producer)
 }
 
 
+int ri_consumer_count_msgs(const ri_consumer_t *consumer)
+{
+  return ri_consumer_queue_count_msgs(consumer->queue);
+}
+
+int ri_producer_count_msgs(const ri_producer_t *producer)
+{
+  return ri_producer_queue_count_msgs(producer->queue);
+}
+
 unsigned ri_consumer_len(const ri_consumer_t *consumer)
 {
   return ri_consumer_queue_len(consumer->queue);

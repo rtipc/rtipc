@@ -66,7 +66,7 @@ int ri_memfd_verify(int fd);
  *         Returns -1 if the descriptor is invalid or does not refer to
  *         an eventfd.
  */
-int ri_eventfd_verify(int fd);;
+int ri_eventfd_verify(int fd);
 
 
 int ri_set_nonblocking(int fd);

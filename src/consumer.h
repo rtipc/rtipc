@@ -20,3 +20,5 @@ const void* ri_consumer_queue_msg(const ri_consumer_queue_t *consumer);
 ri_pop_result_t ri_consumer_queue_pop(ri_consumer_queue_t *consumer);
 
 ri_pop_result_t ri_consumer_queue_flush(ri_consumer_queue_t *consumer);
+
+int ri_consumer_queue_count_msgs(const ri_consumer_queue_t *consumer);

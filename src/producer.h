@@ -25,3 +25,5 @@ ri_force_push_result_t ri_producer_queue_force_push(ri_producer_queue_t *produce
 ri_try_push_result_t ri_producer_queue_try_push(ri_producer_queue_t *producer);
 
 bool ri_producer_queue_full(const ri_producer_queue_t *producer);
+
+int ri_producer_queue_count_msgs(const ri_producer_queue_t *producer);

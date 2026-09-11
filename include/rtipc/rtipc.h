@@ -401,6 +401,8 @@ ri_pop_result_t ri_consumer_pop(ri_consumer_t *consumer);
 ri_pop_result_t ri_consumer_flush(ri_consumer_t *consumer);
 
 
+int ri_consumer_count_msgs(const ri_consumer_t *consumer);
+
 /**
  * @brief Get the size of messages in the consumer's message queue.
  *
@@ -565,6 +567,7 @@ typedef enum ri_try_push_result {
  */
 ri_try_push_result_t ri_producer_try_push(ri_producer_t *producer);
 
+int ri_producer_count_msgs(const ri_producer_t *producer);
 
 /**
  * @brief Get the size of messages in the producer's message queue.

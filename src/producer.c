@@ -211,6 +211,30 @@ bool ri_producer_queue_full(const ri_producer_queue_t *producer) {
   }
 }
 
+int ri_producer_queue_count_msgs(const ri_producer_queue_t *producer)
+{
+  if (producer->head == RI_INDEX_INVALID) {
+    // queue is empty
+    return 0;
+  }
+
+  const ri_queue_t *queue = &producer->queue;
+
+  ri_index_t next = ri_queue_tail_load(queue);
+
+  next &= RI_INDEX_MASK;
+
+  if (!ri_queue_index_valid(queue, next))
+    return -1;
+
+  for (unsigned cnt = 0; cnt < queue->n_msgs; cnt++) {
+    if (next == RI_INDEX_INVALID)
+      return cnt;
+    next = queue->chain[next];
+  }
+
+  return queue->n_msgs;
+}
 
 /* inserts the next message into the queue and
  * if the queue is full, discard the last message that is not
@@ -345,3 +369,5 @@ void* ri_producer_queue_msg(const ri_producer_queue_t *producer)
 {
   return ri_queue_get_msg(&producer->queue, producer->current);
 }
+
+
