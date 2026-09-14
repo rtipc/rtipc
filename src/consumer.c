@@ -86,32 +86,40 @@ int ri_consumer_queue_count_msgs(const ri_consumer_queue_t *consumer)
   if (next == RI_INDEX_INVALID)
     return 0;
 
+  if (!(next & RI_CONSUMED_FLAG) && !(next & RI_FIRST_FLAG)){
+    /* overrun, queue must be full */
+    return queue->n_msgs - 1;
+  }
+
   next &= RI_INDEX_MASK;
 
   if (!ri_queue_index_valid(queue, next))
-    return -1;
+    return -1; 
 
   unsigned cnt;
   for (cnt = 0; cnt < queue->n_msgs; cnt++) {
     next = ri_queue_chain_load(queue, next);
 
-    if (next == RI_INDEX_INVALID)
+    if (next == RI_INDEX_INVALID) {
       /* end of queue, no newer message available */
-      break;
+
+      /* check again for overrun */
+      next = ri_queue_tail_load(queue);
+
+      if (!(next & RI_CONSUMED_FLAG) && !(next & RI_FIRST_FLAG)) {
+        return queue->n_msgs - 1;
+      }
+
+      return cnt + 1;
+    }
 
     if (!ri_queue_index_valid(queue, next))
       return -1;
   }
 
-  /* check again for overrun */
-  next = ri_queue_tail_load(queue);
-
-  if (!(next & RI_CONSUMED_FLAG) && (consumer->current != RI_INDEX_INVALID)) {
-    return queue->n_msgs - 1;
-  }
-
-  return cnt + 1;
+  return queue->n_msgs - 1;
 }
+
 
 ri_pop_result_t ri_consumer_queue_flush(ri_consumer_queue_t *consumer)
 {
