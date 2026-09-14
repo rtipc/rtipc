@@ -96,8 +96,7 @@ int ri_consumer_queue_count_msgs(const ri_consumer_queue_t *consumer)
   if (!ri_queue_index_valid(queue, next))
     return -1; 
 
-  unsigned cnt;
-  for (cnt = 0; cnt < queue->n_msgs; cnt++) {
+  for (unsigned cnt = 0; cnt < queue->n_msgs; cnt++) {
     next = ri_queue_chain_load(queue, next);
 
     if (next == RI_INDEX_INVALID) {
