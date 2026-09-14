@@ -6,9 +6,9 @@
 void msg_command_print(const msg_command_t *msg)
 {
   LOG_INF("command: \tid=0x%x", msg->id);
-  LOG_INF("\targ[0]=0x%x", msg->args[0]);
-  LOG_INF("\targ[1]=0x%x", msg->args[1]);
-  LOG_INF("\targ[2]=0x%x", msg->args[2]);
+  //LOG_INF("\targ[0]=0x%x", msg->args.[0]);
+  //LOG_INF("\targ[1]=0x%x", msg->args[1]);
+  //LOG_INF("\targ[2]=0x%x", msg->args[2]);
 }
 
 

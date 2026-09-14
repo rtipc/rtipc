@@ -12,24 +12,6 @@
 #include "messages.h"
 
 
-const ri_channel_attr_t client2server_channels[] = {
-    (ri_channel_attr_t) { .add_msgs = 0, .msg_size = sizeof(msg_command_t), .eventfd = 1, .info = { .data = COMMAND_INFO, .size = sizeof(COMMAND_INFO) }},
-  { 0 },
-};
-
-
-const ri_channel_attr_t server2client_channels[] = {
-  (ri_channel_attr_t) { .add_msgs = 0, .msg_size = sizeof(msg_response_t), .eventfd = 1, .info = { .data = RESPONSE_INFO, .size = sizeof(RESPONSE_INFO) }},
-  (ri_channel_attr_t) { .add_msgs = 10, .msg_size = sizeof(msg_event_t), .eventfd = 1, .info = { .data = EVENT_INFO, .size = sizeof(EVENT_INFO) }},
-  { 0 },
-};
-
-
-const ri_group_attr_t grp_attr = {
-    .consumers = server2client_channels,
-    .producers = client2server_channels,
-    .info = { .data = GROUP_INFO, .size = sizeof(GROUP_INFO) }
-};
 
 typedef struct client {
     ri_producer_t *command;
@@ -41,31 +23,29 @@ typedef struct client {
 
 
 static msg_command_t commands[] = {
-  (msg_command_t) {
+  {
       .id = CMDID_HELLO,
-      .args = {1, 2, 0},
   },
-  (msg_command_t) {
+  {
       .id = CMDID_SENDEVENT,
-      .args = {11, 20, 0},
+      .args.send = {11, 20, false},
   },
-  (msg_command_t) {
+  {
       .id = CMDID_SENDEVENT,
-      .args = {12, 20, 1},
+      .args.send = {12, 20, true},
   },
-  (msg_command_t) {
+  {
       .id = CMDID_DIV,
-      .args = {100, 7, 0},
+      .args.div = {100, 7},
   },
-  (msg_command_t) {
+  {
       .id = CMDID_DIV,
-      .args = {100, 0, 0},
+      .args.div = {100, 0},
   },
-  (msg_command_t) {
+  {
       .id = CMDID_STOP,
-      .args = {0, 0, 0},
   },
-  (msg_command_t) {
+   {
       .id = CMDID_UNKNOWN,
   },
 };
@@ -199,9 +179,9 @@ void client_run(client_t *client, const msg_command_t *cmds)
 
 int main()
 {
+  //LOG_INF("info: %s", rpc_info.data);
 
-
-  client_t *client = client_new("rtipc.sock", &grp_attr);
+  client_t *client = client_new("rtipc.sock", &client_group_rpc);
   if (!client) {
     return -1;
   }

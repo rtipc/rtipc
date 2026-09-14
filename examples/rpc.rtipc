@@ -1,0 +1,47 @@
+struct SendEventArgs {
+	id: u32,
+	force: bool,
+	num: u32
+}
+
+struct DivArgs {
+	divisor: f64,
+	divident: f64,
+}
+
+union CommandArgs {
+	div: DivArgs,
+	send: SendEventArgs,
+	
+}
+
+struct MsgCommand {
+	id: u32,
+	args: CommandArgs,
+}
+
+union ResponseData {
+	 quotient: f64,
+}
+
+struct MsgResponse {
+	id: u32,
+	result: i32,
+	data: ResponseData,
+}
+
+struct MsgEvent {
+	id: u32,
+	nr: u32,
+}
+
+group RPC {
+
+	c2s {
+		command: [MsgCommand;0;true],
+	} 
+	s2c {
+		response: [MsgResponse;0;true],
+		event: [MsgEvent;10; true],
+	}	
+}

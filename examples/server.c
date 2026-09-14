@@ -27,27 +27,16 @@ static void server_delete(server_t* server)
   free(server);
 }
 
-static bool server_print_info(const ri_group_attr_t* attr, unsigned n_consumers, unsigned n_producers, void *userdata)
+static bool server_check(const ri_group_attr_t* attr, unsigned n_consumers, unsigned n_producers, void *userdata)
 {
 
-  if (n_consumers != 1) {
-    LOG_ERR("unexpected number of conusmers=%d", n_consumers);
-    return false;
+  bool r = ri_group_attr_equal(attr, &server_group_rpc);
+
+  if (!r) {
+    LOG_ERR("server_check failed");
   }
 
-  if (n_producers != 2) {
-    LOG_ERR("unexpected number of producers=%d", n_producers);
-    return false;
-  }
-
-  LOG_INF("group name = %s", (const char*)attr->info.data);
-
-  LOG_INF("command name = %s", (const char*)attr->consumers[0].info.data);
-
-  LOG_INF("response name = %s", (const char*)attr->producers[0].info.data);
-
-  LOG_INF("event name = %s", (const char*)attr->producers[1].info.data);
-  return true;
+  return r;
 }
 
 static server_t* server_new(const char *path)
@@ -56,7 +45,7 @@ static server_t* server_new(const char *path)
   if (!ri_server)
     goto fail_server;
 
-  ri_group_t *grp = ri_server_accept(ri_server, server_print_info, ri_server);
+  ri_group_t *grp = ri_server_accept(ri_server, server_check, ri_server);
 
   ri_server_delete(ri_server);
 
@@ -112,7 +101,7 @@ static int32_t server_send_events(ri_producer_t *producer, uint32_t id, unsigned
 }
 
 
-static int32_t server_div(int32_t a, int32_t b, int32_t *res)
+static int32_t server_div(double a, double b, double *res)
 {
   if (b == 0) {
     return -1;
@@ -122,7 +111,7 @@ static int32_t server_div(int32_t a, int32_t b, int32_t *res)
   }
 }
 
-void server_run(server_t *server)
+static void server_run(server_t *server)
 {
 
   for (int i = 0; i < MAX_CYCLES; i++) {
@@ -151,10 +140,10 @@ void server_run(server_t *server)
       rsp->result = 0;
       break;
     case CMDID_SENDEVENT:
-      rsp->result = server_send_events(server->event, cmd->args[0], cmd->args[1], cmd->args[2]);
+      rsp->result = server_send_events(server->event, cmd->args.send.id, cmd->args.send.num, cmd->args.send.force);
       break;
     case CMDID_DIV:
-      rsp->result = server_div(cmd->args[0], cmd->args[1], &rsp->data);
+      rsp->result = server_div(cmd->args.div.divisor, cmd->args.div.divident, &rsp->data.quotient);
       break;
     default:
       rsp->result = -1;
@@ -167,7 +156,7 @@ void server_run(server_t *server)
 }
 
 
-int main()
+int main(void)
 {
   server_t* server = server_new("rtipc.sock");
 
