@@ -41,30 +41,26 @@ bool ri_channel_attr_equal(const ri_channel_attr_t *c0, const ri_channel_attr_t 
 
 bool ri_group_attr_equal(const ri_group_attr_t *g0, const ri_group_attr_t *g1)
 {
-  bool r = ri_info_equal(g0->info, g1->info);
-
-  if (!r)
+  if (!ri_info_equal(g0->info, g1->info))
     return false;
 
-  for (unsigned i = 0; i; i++) {
+  for (unsigned i = 0; ; i++) {
     if ((g0->consumers[i].msg_size == 0) && (g1->consumers[i].msg_size == 0))
-      return true;
-    r = ri_channel_attr_equal(&g0->consumers[i], &g1->consumers[i]);
-
-    if (!r)
+      break;
+    if (!ri_channel_attr_equal(&g0->consumers[i], &g1->consumers[i])) {
       return false;
+    }
   }
 
-  for (unsigned i = 0; i; i++) {
+  for (unsigned i = 0; ; i++) {
     if ((g0->producers[i].msg_size == 0) && (g1->producers[i].msg_size == 0))
-      return true;
-    r = ri_channel_attr_equal(&g0->producers[i], &g1->producers[i]);
-
-    if (!r)
+      break;
+    if (!ri_channel_attr_equal(&g0->producers[i], &g1->producers[i])) {
       return false;
+    }
   }
 
-  return false;
+  return true;
 }
 
 
