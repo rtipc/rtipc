@@ -26,11 +26,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /**
  * @typedef ri_log_fn
@@ -50,12 +48,8 @@ extern "C" {
  *       If the arguments need to be processed multiple times, use
  *       @c va_copy.
  */
-typedef void (*ri_log_fn)(int priority,
-                          const char *file,
-                          const char *line,
-                          const char *func,
-                          const char *format,
-                          va_list ap);
+typedef void (*ri_log_fn)(int priority, const char *file, const char *line,
+                          const char *func, const char *format, va_list ap);
 
 /**
  * @brief Sets a custom log handler for the library.
@@ -72,11 +66,10 @@ void ri_set_log_handler(ri_log_fn log_handler);
 
 /**
  * @typedef ri_group_t
- * @brief Opaque handle to a channel vector connecting producer and consumer channels
- * mapped to the same shared memory region.
+ * @brief Opaque handle to a channel vector connecting producer and consumer
+ * channels mapped to the same shared memory region.
  */
 typedef struct ri_group ri_group_t;
-
 
 /**
  * @typedef ri_info_t
@@ -86,7 +79,7 @@ typedef struct ri_group ri_group_t;
  * from the server to the client.
  */
 typedef struct ri_info {
-  size_t size; /**< Size of the payload in bytes */
+  size_t size;      /**< Size of the payload in bytes */
   const void *data; /**< Pointer to read-only payload buffer */
 } ri_info_t;
 
@@ -129,8 +122,8 @@ typedef struct ri_channel_attr {
 
 } ri_channel_attr_t;
 
-
-bool ri_channel_attr_equal(const ri_channel_attr_t *c0, const ri_channel_attr_t *c1);
+bool ri_channel_attr_equal(const ri_channel_attr_t *c0,
+                           const ri_channel_attr_t *c1);
 
 /**
  * @typedef ri_group_attr_t
@@ -169,7 +162,6 @@ typedef struct ri_group_attr {
 
 } ri_group_attr_t;
 
-
 bool ri_group_attr_equal(const ri_group_attr_t *g0, const ri_group_attr_t *g1);
 
 /**
@@ -184,8 +176,7 @@ bool ri_group_attr_equal(const ri_group_attr_t *g0, const ri_group_attr_t *g1);
  * @param vattr Pointer to a static vector configuration
  *
  */
-ri_group_t* ri_group_from_attr(const ri_group_attr_t *gattr);
-
+ri_group_t *ri_group_from_attr(const ri_group_attr_t *gattr);
 
 /**
  * @brief Destroys a channel vector.
@@ -213,20 +204,24 @@ ri_group_attr_t ri_group_get_attr(const ri_group_t *grp);
  *
  * @param grp   Pointer to the group.
  * @param index Index of the consumer channel.
- * @return Pointer to the consumer channel attributes, or NULL if @p index is invalid.
+ * @return Pointer to the consumer channel attributes, or NULL if @p index is
+ * invalid.
  *
  */
-const ri_channel_attr_t* ri_group_get_consumer_attr(const ri_group_t *grp, unsigned index);
+const ri_channel_attr_t *ri_group_get_consumer_attr(const ri_group_t *grp,
+                                                    unsigned index);
 
 /**
  * @brief Get the attributes of a producer channel.
  *
  * @param grp   Pointer to the group.
  * @param index Index of the producer channel.
- * @return Pointer to the producer channel attributes, or NULL if @p index is invalid.
+ * @return Pointer to the producer channel attributes, or NULL if @p index is
+ * invalid.
  *
  */
-const ri_channel_attr_t* ri_group_get_producer_attr(const ri_group_t *grp, unsigned index);
+const ri_channel_attr_t *ri_group_get_producer_attr(const ri_group_t *grp,
+                                                    unsigned index);
 
 /**
  * Returns the number of bytes required to serialize a channel group.
@@ -238,7 +233,6 @@ const ri_channel_attr_t* ri_group_get_producer_attr(const ri_group_t *grp, unsig
  * @return The size in bytes required to serialize the channel group.
  */
 size_t ri_group_serialize_size(const ri_group_t *grp);
-
 
 /**
  * Serializes a channel group into the provided buffer.
@@ -261,8 +255,8 @@ size_t ri_group_serialize_size(const ri_group_t *grp);
  *
  * @return 0 on success, or a negative error code on failure.
  */
-int ri_group_serialize(const ri_group_t *grp, void* req, size_t size, int fds[], unsigned *n_fds);
-
+int ri_group_serialize(const ri_group_t *grp, void *req, size_t size, int fds[],
+                       unsigned *n_fds);
 
 /**
  * Deserializes a channel group from a serialized buffer.
@@ -284,7 +278,8 @@ int ri_group_serialize(const ri_group_t *grp, void* req, size_t size, int fds[],
  *
  * @return A newly allocated channel group on success, or NULL on failure.
  */
-ri_group_t* ri_group_deserialize(const void* req, size_t size, int fds[], unsigned *n_fds);
+ri_group_t *ri_group_deserialize(const void *req, size_t size, int fds[],
+                                 unsigned *n_fds);
 
 /**
  * @brief Returns the user-defined metadata associated with the group.
@@ -305,7 +300,6 @@ ri_info_t ri_group_info(const ri_group_t *grp);
  */
 unsigned ri_group_num_consumers(const ri_group_t *grp);
 
-
 /**
  * @brief Get the number of producer channels.
  *
@@ -314,7 +308,6 @@ unsigned ri_group_num_consumers(const ri_group_t *grp);
  */
 unsigned ri_group_num_producers(const ri_group_t *grp);
 
-
 /**
  * @typedef ri_consumer_t
  * @brief Handle for receiving messages from a peer process.
@@ -322,7 +315,6 @@ unsigned ri_group_num_producers(const ri_group_t *grp);
  * A consumer reads messages written by a producer in the *other* process.
  */
 typedef struct ri_consumer ri_consumer_t;
-
 
 /**
  * @brief Transfer ownership of a consumer channel from the group to the caller.
@@ -334,8 +326,7 @@ typedef struct ri_consumer ri_consumer_t;
  * @param index Index of the consumer channel to take.
  * @return Pointer to the consumer on success; NULL on error.
  */
-ri_consumer_t* ri_group_acquire_consumer(ri_group_t *grp, unsigned index);
-
+ri_consumer_t *ri_group_acquire_consumer(ri_group_t *grp, unsigned index);
 
 /**
  * @brief Destroys a consumer channel.
@@ -348,7 +339,6 @@ ri_consumer_t* ri_group_acquire_consumer(ri_group_t *grp, unsigned index);
  */
 void ri_consumer_release(ri_consumer_t *consumer);
 
-
 /**
  * @brief Returns a pointer to the consumer's current message buffer.
  *
@@ -358,8 +348,7 @@ void ri_consumer_release(ri_consumer_t *consumer);
  *
  * The returned memory is owned by the library and must not be freed.
  */
-const void* ri_consumer_msg(const ri_consumer_t *consumer);
-
+const void *ri_consumer_msg(const ri_consumer_t *consumer);
 
 /**
  * @enum ri_pop_result_t
@@ -422,15 +411,14 @@ typedef enum ri_pop_result {
  */
 ri_pop_result_t ri_consumer_pop(ri_consumer_t *consumer);
 
-
 /**
- * @brief ri_consumer_flush get message from the head, discarding all older messages
+ * @brief ri_consumer_flush get message from the head, discarding all older
+ * messages
  *
  * @param consumer pointer to consumer
  * @return result
  */
 ri_pop_result_t ri_consumer_flush(ri_consumer_t *consumer);
-
 
 int ri_consumer_count_msgs(const ri_consumer_t *consumer);
 
@@ -441,7 +429,6 @@ int ri_consumer_count_msgs(const ri_consumer_t *consumer);
  * @return Size of messages in the queue, in bytes.
  */
 size_t ri_consumer_msg_size(const ri_consumer_t *consumer);
-\
 
 /**
  * @brief Returns the eventfd used by this consumer.
@@ -451,14 +438,12 @@ size_t ri_consumer_msg_size(const ri_consumer_t *consumer);
  */
 int ri_consumer_eventfd(const ri_consumer_t *consumer);
 
-
 /**
  * @brief Transfers ownership of the eventfd to the caller.
  *
  * After this call, the consumer no longer uses or closes the descriptor.
  */
 int ri_consumer_take_eventfd(ri_consumer_t *consumer);
-
 
 /**
  * @typedef ri_producer_t
@@ -468,7 +453,6 @@ int ri_consumer_take_eventfd(ri_consumer_t *consumer);
  * *other* process.
  */
 typedef struct ri_producer ri_producer_t;
-
 
 /**
  * @brief Transfer ownership of a producer channel from the group to the caller.
@@ -480,8 +464,7 @@ typedef struct ri_producer ri_producer_t;
  * @param index Index of the producer channel to take.
  * @return Pointer to the producer on success; NULL on error.
  */
-ri_producer_t* ri_group_acquire_producer(ri_group_t *grp, unsigned index);
-
+ri_producer_t *ri_group_acquire_producer(ri_group_t *grp, unsigned index);
 
 /**
  * @brief Destroys a producer channel.
@@ -494,7 +477,6 @@ ri_producer_t* ri_group_acquire_producer(ri_group_t *grp, unsigned index);
  */
 void ri_producer_release(ri_producer_t *producer);
 
-
 /**
  * @brief Returns a pointer to the producer's current writable message buffer.
  *
@@ -504,8 +486,7 @@ void ri_producer_release(ri_producer_t *producer);
  * The pointer remains valid until the next push operation or until the
  * producer is deleted.
  */
-void* ri_producer_msg(const ri_producer_t *producer);
-
+void *ri_producer_msg(const ri_producer_t *producer);
 
 /**
  * @enum ri_produce_result_t
@@ -541,10 +522,9 @@ typedef enum ri_force_push_result {
 
 } ri_force_push_result_t;
 
-
 /**
- * @brief Submit the current message and acquire a new message buffer, discarding
- *        the oldest queued message if necessary.
+ * @brief Submit the current message and acquire a new message buffer,
+ * discarding the oldest queued message if necessary.
  *
  * If the queue is full, the oldest message that is not currently in use by the
  * consumer will be discarded to make room for the new message.
@@ -553,7 +533,6 @@ typedef enum ri_force_push_result {
  * @return Result indicating the outcome of the operation.
  */
 ri_force_push_result_t ri_producer_force_push(ri_producer_t *producer);
-
 
 /**
  * @enum ri_try_result_t
@@ -585,9 +564,9 @@ typedef enum ri_try_push_result {
 
 } ri_try_push_result_t;
 
-
 /**
- * @brief Attempt to submit the current message and acquire a new message buffer.
+ * @brief Attempt to submit the current message and acquire a new message
+ * buffer.
  *
  * If the producer's queue is not full, the current message is enqueued and
  * a new message buffer is returned to the producer. If the queue is full,
@@ -608,7 +587,6 @@ int ri_producer_count_msgs(const ri_producer_t *producer);
  */
 size_t ri_producer_msg_size(const ri_producer_t *producer);
 
-
 /**
  * @brief Returns the eventfd used by this producer.
  *
@@ -617,14 +595,12 @@ size_t ri_producer_msg_size(const ri_producer_t *producer);
  */
 int ri_producer_eventfd(const ri_producer_t *producer);
 
-
 /**
  * @brief Transfers ownership of the eventfd to the caller.
  *
  * After this call, the producer no longer uses or closes the descriptor.
  */
 int ri_producer_take_eventfd(ri_producer_t *producer);
-
 
 /**
  * @brief Enables producer-side message caching.
@@ -654,7 +630,6 @@ int ri_producer_take_eventfd(ri_producer_t *producer);
  */
 int ri_producer_cache_enable(ri_producer_t *producer);
 
-
 /**
  * @brief Disables message caching and writes cached data back.
  *
@@ -662,8 +637,6 @@ int ri_producer_cache_enable(ri_producer_t *producer);
  * shared memory message slot again.
  */
 void ri_producer_cache_disable(ri_producer_t *producer);
-
-
 
 #ifdef __cplusplus
 }
