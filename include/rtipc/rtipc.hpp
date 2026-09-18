@@ -118,10 +118,6 @@ private:
 public:
   ~Consumer() noexcept override = default;
 
-  // Non-copyable
-  Consumer(const Consumer &) = delete;
-  Consumer &operator=(const Consumer &) = delete;
-
   // Movable
   Consumer(Consumer &&other) noexcept = default;
   Consumer &operator=(Consumer &&other) noexcept = default;
@@ -177,10 +173,6 @@ private:
 public:
   ~Producer() noexcept override = default;
 
-  // Non-copyable
-  Producer(const Producer &) = delete;
-  Producer &operator=(const Producer &) = delete;
-
   // Movable
   Producer(Producer &&other) noexcept = default;
   Producer &operator=(Producer &&other) noexcept = default;
@@ -200,10 +192,10 @@ public:
 
 class ChannelGroup final {
 public:
-  // deserializw
-  explicit ChannelGroup(const std::span<std::byte> &req, std::span<int> &fds);
-
   explicit ChannelGroup(const GroupAttr &attr);
+
+  // deserialize
+  explicit ChannelGroup(const std::span<std::byte> req, std::span<int> fds);
 
   ~ChannelGroup() noexcept = default;
 
@@ -215,7 +207,7 @@ public:
   ChannelGroup(ChannelGroup &&other) noexcept = default;
   ChannelGroup &operator=(ChannelGroup &&other) noexcept = default;
 
-  std::tuple<std::vector<std::byte>, std::vector<int>> serialize();
+  std::tuple<std::vector<std::byte>, std::vector<int>> serialize() const;
 
   template <TriviallyCopyable T> Consumer<T> acquire_consumer(unsigned index) {
 

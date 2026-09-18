@@ -1,5 +1,7 @@
 #include "rtipc/rtipc.hpp"
 
+#include <unistd.h>
+
 #include <rtipc/rtipc.h>
 
 namespace rtipc {
@@ -134,6 +136,46 @@ ChannelGroup::ChannelGroup(const GroupAttr &group_attr) {
   }
 
   group_ = GroupPtr(group);
+}
+
+ChannelGroup::ChannelGroup(const std::span<std::byte> req, std::span<int> fds) {
+  const void *c_req = req.data();
+  size_t req_size = req.size();
+  int *c_fds = fds.data();
+  unsigned n_fds = fds.size();
+
+  ::ri_group_t *group = ::ri_group_deserialize(c_req, req_size, c_fds, &n_fds);
+  if (group == nullptr) {
+    throw std::runtime_error("ri_group_deserialize returned NULL");
+  }
+
+  // close remaining fds
+  for (int &fd : fds.subspan(n_fds)) {
+    if (fd >= 0) {
+      ::close(fd);
+      fd = -1;
+    }
+  }
+
+  group_ = GroupPtr(group);
+}
+
+std::tuple<std::vector<std::byte>, std::vector<int>>
+ChannelGroup::serialize() const {
+  unsigned n_fds = 253; // maximum file descriptors that can be sent over a unix
+                        // domain socket (kernel/include/net/scm.h)
+  size_t req_size = ::ri_group_serialize_size(group_.get());
+  auto req = std::vector<std::byte>(req_size);
+  auto fds = std::vector<int>(n_fds);
+  int r = ::ri_group_serialize(group_.get(), req.data(), req.size(), fds.data(),
+                               &n_fds);
+  if (r < 0)
+    throw std::runtime_error("ri_group_serialize returned error");
+
+  // delete unused fds
+  fds.erase(fds.begin() + n_fds, fds.end());
+
+  return {req, fds};
 }
 
 ConsumerPtr ChannelGroup::acquire_consumer_impl(unsigned index) {
