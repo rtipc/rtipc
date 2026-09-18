@@ -26,21 +26,21 @@ void producer_release(::ri_producer *producer);
 void group_delete(::ri_group *group);
 
 struct ConsumerDeleter {
-  void operator()(ri_consumer *consumer) const noexcept {
+  void operator()(::ri_consumer *consumer) const noexcept {
     if (consumer)
       consumer_release(consumer);
   }
 };
 
 struct ProducerDeleter {
-  void operator()(ri_producer *producer) const noexcept {
+  void operator()(::ri_producer *producer) const noexcept {
     if (producer)
       producer_release(producer);
   }
 };
 
 struct GroupDeleter {
-  void operator()(ri_group *group) const noexcept {
+  void operator()(::ri_group *group) const noexcept {
     if (group)
       group_delete(group);
   }
@@ -89,9 +89,8 @@ class ConsumerBase {
   friend class ChannelGroup;
 
 protected:
-  explicit ConsumerBase(ConsumerPtr consumer) noexcept;
-
-public:
+  explicit ConsumerBase(ConsumerPtr consumer) noexcept
+      : consumer_(std::move(consumer)) {};
   virtual ~ConsumerBase() noexcept = default;
 
   ConsumerBase(const ConsumerBase &) = delete;
@@ -99,6 +98,8 @@ public:
 
   ConsumerBase(ConsumerBase &&other) noexcept = default;
   ConsumerBase &operator=(ConsumerBase &&other) noexcept = default;
+
+  const void *current_message_ptr() const noexcept;
 
   std::expected<PopResult, QueueError> pop() noexcept;
   std::expected<unsigned, QueueError> count_messages() const noexcept;
@@ -115,7 +116,6 @@ private:
       : ConsumerBase(std::move(consumer)) {}
 
 public:
-  Consumer();
   ~Consumer() noexcept override = default;
 
   // Non-copyable
@@ -126,7 +126,14 @@ public:
   Consumer(Consumer &&other) noexcept = default;
   Consumer &operator=(Consumer &&other) noexcept = default;
 
-  std::optional<const T &> current_message() const noexcept;
+  std::optional<const T &> current_message() const noexcept {
+    const void *vptr = current_message_ptr();
+    if (vptr == nullptr)
+      return std::nullopt;
+
+    const T *ptr = static_cast<const T *>(vptr);
+    return *ptr;
+  }
 
   using ConsumerBase::count_messages;
   using ConsumerBase::pop;
@@ -136,9 +143,8 @@ class ProducerBase {
   friend class ChannelGroup;
 
 protected:
-  explicit ProducerBase(ProducerPtr producer) noexcept;
-
-public:
+  explicit ProducerBase(ProducerPtr producer) noexcept
+      : producer_(std::move(producer)) {};
   virtual ~ProducerBase() noexcept = default;
 
   // Non-copyable
@@ -149,6 +155,7 @@ public:
   ProducerBase(ProducerBase &&other) noexcept = default;
   ProducerBase &operator=(ProducerBase &&other) noexcept = default;
 
+  void *current_message_ptr() const noexcept;
   std::expected<TryPushResult, QueueError> try_push() noexcept;
   std::expected<ForcePushResult, QueueError> force_push() noexcept;
   std::expected<unsigned, QueueError> count_messages() const noexcept;
@@ -160,7 +167,7 @@ protected:
   ProducerPtr producer_;
 };
 
-template <TriviallyCopyable T> class Producer final : protected ProducerBase {
+template <TriviallyCopyable T> class Producer final : private ProducerBase {
   friend class ChannelGroup;
 
 private:
@@ -184,7 +191,11 @@ public:
   using ProducerBase::force_push;
   using ProducerBase::try_push;
 
-  T &current_message() noexcept;
+  T &current_message() const noexcept {
+    void *vptr = current_message_ptr();
+    T *ptr = static_cast<T *>(vptr);
+    return *ptr;
+  }
 };
 
 class ChannelGroup final {

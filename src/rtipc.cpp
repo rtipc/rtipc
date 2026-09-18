@@ -33,6 +33,77 @@ to_c_channel_attr(const ChannelAttr &attr) {
 
 static const ::ri_channel_attr_t zero_attr{};
 
+const void *ConsumerBase::current_message_ptr() const noexcept {
+  return ::ri_consumer_msg(consumer_.get());
+}
+
+std::expected<PopResult, QueueError> ConsumerBase::pop() noexcept {
+  ::ri_pop_result_t result = ri_consumer_pop(consumer_.get());
+
+  switch (result) {
+  case ::RI_POP_RESULT_NO_MSG:
+    return PopResult::no_message;
+  case ::RI_POP_RESULT_NO_UPDATE:
+    return PopResult::no_update;
+  case ::RI_POP_RESULT_SUCCESS:
+    return PopResult::success;
+  case ::RI_POP_RESULT_DISCARDED:
+    return PopResult::messages_discarded;
+  case ::RI_POP_RESULT_ERROR:
+    break;
+  }
+
+  return std::unexpected(QueueError::invalid_index);
+}
+
+std::expected<unsigned, QueueError>
+ConsumerBase::count_messages() const noexcept {
+  int cnt = ::ri_consumer_count_msgs(consumer_.get());
+  if (cnt < 0)
+    return std::unexpected(QueueError::invalid_index);
+
+  return cnt;
+}
+
+void *ProducerBase::current_message_ptr() const noexcept {
+  return ::ri_producer_msg(producer_.get());
+}
+
+std::expected<ForcePushResult, QueueError> ProducerBase::force_push() noexcept {
+  ::ri_force_push_result_t result = ::ri_producer_force_push(producer_.get());
+  switch (result) {
+  case ::RI_FORCE_PUSH_RESULT_SUCCESS:
+    return ForcePushResult::success;
+  case ::RI_FORCE_PUSH_RESULT_DISCARDED:
+    return ForcePushResult::message_discarded;
+  case ::RI_FORCE_PUSH_RESULT_ERROR:
+    break;
+  }
+  return std::unexpected(QueueError::invalid_index);
+}
+
+std::expected<TryPushResult, QueueError> ProducerBase::try_push() noexcept {
+  ::ri_try_push_result_t result = ::ri_producer_try_push(producer_.get());
+  switch (result) {
+  case ::RI_TRY_PUSH_RESULT_SUCCESS:
+    return TryPushResult::success;
+  case ::RI_TRY_PUSH_RESULT_FAIL:
+    return TryPushResult::fail;
+  case ::RI_TRY_PUSH_RESULT_ERROR:
+    break;
+  }
+  return std::unexpected(QueueError::invalid_index);
+}
+
+std::expected<unsigned, QueueError>
+ProducerBase::count_messages() const noexcept {
+  int cnt = ::ri_producer_count_msgs(producer_.get());
+  if (cnt < 0) {
+    return std::unexpected(QueueError::invalid_index);
+  }
+  return cnt;
+}
+
 ChannelGroup::ChannelGroup(const GroupAttr &group_attr) {
   std::vector<ri_channel_attr_t> c_consumers;
   std::vector<ri_channel_attr_t> c_producers;
@@ -100,4 +171,5 @@ size_t ChannelGroup::producer_message_size(unsigned index) const {
 
   return attr->msg_size;
 }
+
 } // namespace rtipc
