@@ -293,6 +293,16 @@ bool filter_callback(const ::ri_group_attr_t* c_attr, unsigned, unsigned, void* 
   return filter(attr);
 }
 
+Server::Server(const std::string &path, int backlog)
+{
+  ::ri_server_t *server = ::ri_server_new(path.c_str(), backlog);
+  if (server == nullptr) {
+    throw std::runtime_error("ri_server_new returned NULL");
+  }
+
+  server_ = ServerPtr(server);
+}
+
 ChannelGroup Server::accept(Filter filter)
 {
   ::ri_group_t *group = ::ri_server_accept(
@@ -305,6 +315,11 @@ ChannelGroup Server::accept(Filter filter)
   }
 
   return ChannelGroup(GroupPtr(group));
-  }
+}
+
+int Server::get_socket() const noexcept
+{
+  return ::ri_server_socket(server_.get());
+}
 
 } // namespace rtipc
