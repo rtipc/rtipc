@@ -19,7 +19,7 @@ static void log_std(int priority,
                     const char *format,
                     va_list ap);
 
-static int m_log_min_level = LOG_LEVEL_DBG;
+static int m_log_min_level = RI_LOG_LEVEL_DBG;
 
 static ri_log_fn ri_log_handler = log_std;
 
@@ -49,7 +49,7 @@ static void log_std(int priority,
   if (priority > m_log_min_level)
     return;
 
-  FILE *out = priority == LOG_LEVEL_ERR ? stderr : stdout;
+  FILE *out = priority == RI_LOG_LEVEL_ERR ? stderr : stdout;
 
   fprintf(out, "[%d] %s:%s in %s: ", priority, file, line, func);
   vfprintf(out, format, ap);
