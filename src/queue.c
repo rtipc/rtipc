@@ -48,11 +48,11 @@ void* ri_queue_get_msg(const ri_queue_t *queue, ri_index_t idx)
 void ri_queue_dump(ri_queue_t *queue)
 {
   LOG_INF("\t\tqueue n_msgs=%u, msg_size=%zu", queue->n_msgs, queue->msg_size);
-  LOG_INF("\t\t\ttail[0x%p]=0x%x", queue->tail, *queue->tail);
-  LOG_INF("\t\t\thead[0x%p]=0x%x", queue->head, *queue->head);
+  LOG_INF("\t\t\ttail[0x%p]=0x%x", (void*)(queue->tail), *queue->tail);
+  LOG_INF("\t\t\thead[0x%p]=0x%x", (void*)queue->head, *queue->head);
 
   for (unsigned i = 0; i < queue->n_msgs; i++) {
-    LOG_INF("\t\t\tqueue[0x%p]=0x%x", &queue->chain[i], queue->chain[i]);
+    LOG_INF("\t\t\tqueue[0x%p]=0x%x", (void*)&queue->chain[i], queue->chain[i]);
   }
 
   LOG_INF("\t\t\tmsgs_start_addr=0x%p", queue->msgs);
