@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -14,6 +15,9 @@ extern "C" {
 struct ri_consumer;
 struct ri_producer;
 struct ri_group;
+struct ri_server;
+struct ri_channel_attr;
+struct ri_group_attr;
 }
 
 namespace rtipc {
@@ -24,6 +28,7 @@ concept TriviallyCopyable = std::is_trivially_copyable_v<T>;
 void consumer_release(::ri_consumer *consumer);
 void producer_release(::ri_producer *producer);
 void group_delete(::ri_group *group);
+void server_delete(::ri_server *server);
 
 struct ConsumerDeleter {
   void operator()(::ri_consumer *consumer) const noexcept {
@@ -46,10 +51,20 @@ struct GroupDeleter {
   }
 };
 
+
+struct ServerDeleter {
+  void operator()(::ri_server *server) const noexcept {
+    if (server)
+      server_delete(server);
+  }
+};
+
+using Info = std::vector<char>;
 using ConsumerPtr = std::unique_ptr<ri_consumer, ConsumerDeleter>;
 using ProducerPtr = std::unique_ptr<ri_producer, ProducerDeleter>;
 using GroupPtr = std::unique_ptr<ri_group, GroupDeleter>;
-using Info = std::vector<char>;
+using ServerPtr = std::unique_ptr<ri_server, ServerDeleter>;
+
 
 enum class QueueError {
   invalid_index,
@@ -73,13 +88,16 @@ enum class PopResult {
 };
 
 struct ChannelAttr {
+  static ChannelAttr from_c_attr(const ::ri_channel_attr *c_attr);
+
   size_t message_size;
   unsigned additional_messages;
-  bool fd;
+  bool eventfd;
   Info info;
 };
 
 struct GroupAttr {
+  static GroupAttr from_c_attr(const ::ri_group_attr *c_attr);
   std::vector<ChannelAttr> consumers;
   std::vector<ChannelAttr> producers;
   Info info;
@@ -104,6 +122,8 @@ protected:
   std::expected<PopResult, QueueError> pop() noexcept;
   std::expected<unsigned, QueueError> count_messages() const noexcept;
 
+  int get_eventfd() const noexcept;
+  int take_eventfd() noexcept;
 protected:
   ConsumerPtr consumer_;
 };
@@ -133,6 +153,8 @@ public:
 
   using ConsumerBase::count_messages;
   using ConsumerBase::pop;
+  using ConsumerBase::get_eventfd;
+  using ConsumerBase::take_eventfd;
 };
 
 class ProducerBase {
@@ -152,9 +174,14 @@ protected:
   ProducerBase &operator=(ProducerBase &&other) noexcept = default;
 
   void *current_message_ptr() const noexcept;
+
   std::expected<TryPushResult, QueueError> try_push() noexcept;
   std::expected<ForcePushResult, QueueError> force_push() noexcept;
+
   std::expected<unsigned, QueueError> count_messages() const noexcept;
+
+  int get_eventfd() const noexcept;
+  int take_eventfd() noexcept;
 
   void cache_enable();
   void cache_disable() noexcept;
@@ -177,11 +204,13 @@ public:
   Producer(Producer &&other) noexcept = default;
   Producer &operator=(Producer &&other) noexcept = default;
 
-  using ProducerBase::cache_disable;
-  using ProducerBase::cache_enable;
   using ProducerBase::count_messages;
   using ProducerBase::force_push;
   using ProducerBase::try_push;
+  using ProducerBase::get_eventfd;
+  using ProducerBase::take_eventfd;
+  using ProducerBase::cache_enable;
+  using ProducerBase::cache_disable;
 
   T &current_message() const noexcept {
     void *vptr = current_message_ptr();
@@ -192,6 +221,7 @@ public:
 
 class ChannelGroup final {
 public:
+  explicit ChannelGroup(GroupPtr group) : group_(std::move(group)) {}
   explicit ChannelGroup(const GroupAttr &attr);
 
   // deserialize
@@ -239,6 +269,28 @@ private:
 
 private:
   GroupPtr group_;
+};
+
+
+
+class Server final{
+  public:
+  using Filter = std::function<bool(const GroupAttr&)>;
+  explicit Server(const std::string &path);
+  ~Server() noexcept;
+
+  // Non-copyable
+  Server(const Server &) = delete;
+  Server &operator=(const Server &) = delete;
+
+  // Movable
+  Server(Server &&other) noexcept = default;
+  Server &operator=(Server &&other) noexcept = default;
+
+  ChannelGroup accept(Filter filter);
+  private:
+
+  ServerPtr server_;
 };
 
 } // namespace rtipc
