@@ -276,8 +276,8 @@ private:
 class Server final{
   public:
   using Filter = std::function<bool(const GroupAttr&)>;
-  explicit Server(const std::string &path);
-  ~Server() noexcept;
+  Server(const std::string &path, int backlog = 1);
+  ~Server() noexcept = default;
 
   // Non-copyable
   Server(const Server &) = delete;
@@ -288,8 +288,9 @@ class Server final{
   Server &operator=(Server &&other) noexcept = default;
 
   ChannelGroup accept(Filter filter);
-  private:
+  int get_socket() const noexcept;
 
+  private:
   ServerPtr server_;
 };
 
