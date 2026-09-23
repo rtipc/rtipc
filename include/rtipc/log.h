@@ -16,7 +16,7 @@ extern "C" {
 #define RI_LOG_MAX_LEVEL RI_LOG_LEVEL_NONE
 #else
 #ifndef RI_LOG_MAX_LEVEL
-#define RI_LOG_MAX_LEVEL RI_LOG_LEVEL_ERR
+#define RI_LOG_MAX_LEVEL RI_LOG_LEVEL_INF
 #endif
 #endif
 

@@ -105,15 +105,15 @@ static client_t* client_new(const char *path, const ri_group_attr_t *grp_attr)
   if (!client)
     goto fail_alloc;
 
-  client->command = ri_group_acquire_producer(grp, 0);
+  client->command = client_rpc_acquire_command(grp);
   if (!client->command)
     goto fail_channel;
 
-  client->response = ri_group_acquire_consumer(grp, 0);
+  client->response = client_rpc_acquire_response(grp);
   if (!client->response)
     goto fail_channel;
 
-  client->event = ri_group_acquire_consumer(grp, 1);
+  client->event = client_rpc_acquire_event(grp);
   if (!client->event)
     goto fail_channel;
 

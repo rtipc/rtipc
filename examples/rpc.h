@@ -48,27 +48,33 @@ typedef struct msg_event {
 } msg_event_t;
 
 
-extern const ri_info_t send_event_args_info;
+extern const ri_info_t channel_send_event_args_info;
 
-extern const ri_info_t div_args_info;
+extern const ri_info_t channel_div_args_info;
 
-extern const ri_info_t command_args_info;
+extern const ri_info_t channel_command_args_info;
 
-extern const ri_info_t msg_command_info;
+extern const ri_info_t channel_msg_command_info;
 
-extern const ri_info_t response_data_info;
+extern const ri_info_t channel_response_data_info;
 
-extern const ri_info_t msg_response_info;
+extern const ri_info_t channel_msg_response_info;
 
-extern const ri_info_t msg_event_info;
+extern const ri_info_t channel_msg_event_info;
 
 
-extern const ri_info_t rpc_info;
+extern const ri_info_t group_rpc_info;
 
 
 extern const ri_group_attr_t client_group_rpc;
+ri_consumer_t* client_rpc_acquire_response(ri_group_t *group);
+ri_consumer_t* client_rpc_acquire_event(ri_group_t *group);
+ri_producer_t* client_rpc_acquire_command(ri_group_t *group);
 
 extern const ri_group_attr_t server_group_rpc;
+ri_consumer_t* server_rpc_acquire_command(ri_group_t *group);
+ri_producer_t* server_rpc_acquire_response(ri_group_t *group);
+ri_producer_t* server_rpc_acquire_event(ri_group_t *group);
 
 
 

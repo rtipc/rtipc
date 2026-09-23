@@ -60,15 +60,15 @@ static server_t* server_new(const char *path)
   if (!server)
     goto fail_alloc;
 
-  server->command = ri_group_acquire_consumer(grp, 0);
+  server->command = server_rpc_acquire_command(grp);
   if (!server->command)
     goto fail_channel;
 
-  server->response = ri_group_acquire_producer(grp, 0);
+  server->response = server_rpc_acquire_response(grp);
   if (!server->response)
     goto fail_channel;
 
-  server->event = ri_group_acquire_producer(grp, 1);
+  server->event = server_rpc_acquire_event(grp);
   if (!server->event)
     goto fail_channel;
 
