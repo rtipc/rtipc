@@ -94,6 +94,7 @@ struct ChannelAttr {
   unsigned additional_messages;
   bool eventfd;
   Info info;
+  bool operator==(const ChannelAttr&) const = default;
 };
 
 struct GroupAttr {
@@ -101,6 +102,7 @@ struct GroupAttr {
   std::vector<ChannelAttr> consumers;
   std::vector<ChannelAttr> producers;
   Info info;
+  bool operator==(const GroupAttr&) const = default;
 };
 
 class ConsumerBase {
