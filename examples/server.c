@@ -29,6 +29,9 @@ static void server_delete(server_t* server)
 
 static bool server_check(const ri_group_attr_t* attr, unsigned n_consumers, unsigned n_producers, void *userdata)
 {
+  RI_UNUSED(n_consumers);
+  RI_UNUSED(n_producers);
+  RI_UNUSED(userdata);
 
   bool r = ri_group_attr_equal(attr, &server_group_rpc);
 

@@ -63,7 +63,7 @@ static void client_delete(client_t *client)
 }
 
 
-int event_listen(void *arg)
+static int event_listen(void *arg)
 {
   client_t *client = arg;
 
@@ -139,7 +139,7 @@ fail_connect:
 
 
 
-void client_run(client_t *client, const msg_command_t *cmds)
+static void client_run(client_t *client, const msg_command_t *cmds)
 {
   const msg_command_t *cmd = cmds;
 
@@ -177,7 +177,7 @@ void client_run(client_t *client, const msg_command_t *cmds)
 }
 
 
-int main()
+int main(void)
 {
   //LOG_INF("info: %s", rpc_info.data);
 

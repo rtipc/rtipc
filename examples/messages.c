@@ -16,7 +16,7 @@ void msg_response_print(const msg_response_t *msg)
 {
   LOG_INF("response: \tid=0x%x", msg->id);
   LOG_INF("\tresult=%i", msg->result);
-  LOG_INF("\tdata[1]=0x%x", msg->data);
+  //LOG_INF("\tdata[1]=0x%x", msg->data.);
 }
 
 

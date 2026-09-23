@@ -58,7 +58,7 @@ typedef struct client_stat {
 } client_stat_t;
 
 
-void print_server_stat(const server_stat_t *stat)
+static void print_server_stat(const server_stat_t *stat)
 {
   LOG_INF("server:");
   LOG_INF("\tmsgs received %lu", stat->received);
@@ -67,7 +67,7 @@ void print_server_stat(const server_stat_t *stat)
 }
 
 
-void print_client_stat(const client_stat_t *stat)
+static void print_client_stat(const client_stat_t *stat)
 {
   LOG_INF("client:");
   LOG_INF("\tmsgs sent %lu", stat->sent);
@@ -295,7 +295,6 @@ static int server_entry(int socket)
   ri_group_delete(vec);
 
   int state = 1;
-  const msg_t *msg = NULL;
 
   server_stat_t stat = {0};
 
@@ -338,7 +337,7 @@ static pid_t fork_on_cpu(int cpu, entry_fn entry, int socket)
 
 
 
-int main()
+int main(void)
 {
   int sockets[2];
 

@@ -7,7 +7,9 @@ include(GNUInstallDirs)
 
 set(CMAKE_C_STANDARD 11)
 
+
 option(RTIPC_BUILD_EXAMPLES "Build examples" OFF)
+option(RTIPC_BUILD_CXX "Build C++ bindings" ON)
 
 set(RTIPC_SRCS
   src/log.c
@@ -38,12 +40,14 @@ set(RTIPC_SRCS
 )
 
 
-set(RTIPC_COMPILER_OPTIONS -Wall -Wextra  -Wsign-compare)
+
+
+set(RTIPC_COMPILER_OPTIONS -Wall -Wextra -pedantic -Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition  -Wsign-compare)
 
 add_library(${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-target_include_directories(rtipc PUBLIC
+target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
@@ -61,8 +65,8 @@ target_sources(${PROJECT_NAME}
       include/rtipc/connect.h
 )
 
+target_compile_options(${PROJECT_NAME} PRIVATE ${RTIPC_COMPILER_OPTIONS})
 
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra  -Wsign-compare)
 
 
 install(
@@ -75,4 +79,8 @@ install(
 
 if (RTIPC_BUILD_EXAMPLES)
 	add_subdirectory(examples)
+endif ()
+
+if (RTIPC_BUILD_CXX)
+	add_subdirectory(cxx)
 endif ()
