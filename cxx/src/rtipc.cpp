@@ -2,10 +2,12 @@
 
 #include <unistd.h>
 
-#include <rtipc/rtipc.h>
 #include <rtipc/connect.h>
+#include <rtipc/rtipc.h>
 
 namespace rtipc {
+
+static const ::ri_channel_attr_t zero_attr{};
 
 void consumer_release(::ri_consumer *consumer) {
   if (consumer)
@@ -39,34 +41,64 @@ to_c_channel_attr(const ChannelAttr &attr) {
                              .info = to_c_info(attr.info)};
 }
 
-ChannelAttr ChannelAttr::from_c_attr(const ::ri_channel_attr *c_attr)
-{
-  return ChannelAttr{
-      c_attr->msg_size,
-      c_attr->add_msgs,
-      c_attr->eventfd,
-      Info((char*)c_attr->info.data, (char*)c_attr->info.data + c_attr->info.size)};
+ChannelAttr ChannelAttr::from_c_attr(const ::ri_channel_attr *c_attr) {
+  return ChannelAttr{c_attr->msg_size, c_attr->add_msgs, c_attr->eventfd,
+                     Info((char *)c_attr->info.data,
+                          (char *)c_attr->info.data + c_attr->info.size)};
 }
 
-
-GroupAttr GroupAttr::from_c_attr(const ::ri_group_attr *group_attr)
-{
+GroupAttr GroupAttr::from_c_attr(const ::ri_group_attr *group_attr) {
   auto consumers = std::vector<ChannelAttr>();
 
-  for (const ::ri_channel_attr_t* a = group_attr->consumers; (a != nullptr) && (a->msg_size > 0); a++)
+  for (const ::ri_channel_attr_t *a = group_attr->consumers;
+       (a != nullptr) && (a->msg_size > 0); a++)
     consumers.emplace_back(ChannelAttr::from_c_attr(a));
 
   auto producers = std::vector<ChannelAttr>();
 
-  for (const ::ri_channel_attr_t* a = group_attr->producers; (a != nullptr) && (a->msg_size > 0); a++)
+  for (const ::ri_channel_attr_t *a = group_attr->producers;
+       (a != nullptr) && (a->msg_size > 0); a++)
     producers.emplace_back(ChannelAttr::from_c_attr(a));
 
-  auto info = Info((char*)group_attr->info.data, (char*)group_attr->info.data + group_attr->info.size);
+  auto info = Info((char *)group_attr->info.data,
+                   (char *)group_attr->info.data + group_attr->info.size);
 
   return GroupAttr{consumers, producers, info};
 }
 
-static const ::ri_channel_attr_t zero_attr{};
+class CGroupAttr final {
+public:
+  explicit CGroupAttr(const GroupAttr &group_attr) {
+    consumers_.reserve(group_attr.consumers.size() + 1);
+    producers_.reserve(group_attr.producers.size() + 1);
+
+    for (const auto &attr : group_attr.consumers) {
+      consumers_.emplace_back(to_c_channel_attr(attr));
+    }
+
+    consumers_.emplace_back(zero_attr);
+
+    for (const auto &attr : group_attr.producers) {
+      producers_.emplace_back(to_c_channel_attr(attr));
+    }
+
+    producers_.emplace_back(zero_attr);
+
+    info_ = group_attr.info;
+
+    c_attr_ = ::ri_group_attr_t{.consumers = consumers_.data(),
+                                .producers = producers_.data(),
+                                .info = to_c_info(info_)};
+  }
+
+  const ::ri_group_attr_t *get() const { return &c_attr_; }
+
+private:
+  std::vector<ri_channel_attr_t> consumers_;
+  std::vector<ri_channel_attr_t> producers_;
+  Info info_;
+  ::ri_group_attr_t c_attr_;
+};
 
 const void *ConsumerBase::current_message_ptr() const noexcept {
   return ::ri_consumer_msg(consumer_.get());
@@ -100,47 +132,35 @@ ConsumerBase::count_messages() const noexcept {
   return cnt;
 }
 
-
-int ConsumerBase::get_eventfd() const noexcept
-{
+int ConsumerBase::get_eventfd() const noexcept {
   return ::ri_consumer_eventfd(consumer_.get());
 }
 
-
-int ConsumerBase::take_eventfd() noexcept
-{
+int ConsumerBase::take_eventfd() noexcept {
   return ::ri_consumer_take_eventfd(consumer_.get());
 }
-
 
 void *ProducerBase::current_message_ptr() const noexcept {
   return ::ri_producer_msg(producer_.get());
 }
 
-
-int ProducerBase::get_eventfd() const noexcept
-{
+int ProducerBase::get_eventfd() const noexcept {
   return ::ri_producer_eventfd(producer_.get());
 }
 
-int ProducerBase::take_eventfd() noexcept
-{
+int ProducerBase::take_eventfd() noexcept {
   return ::ri_producer_take_eventfd(producer_.get());
 }
 
-void ProducerBase::cache_enable()
-{
+void ProducerBase::cache_enable() {
   int r = ::ri_producer_cache_enable(producer_.get());
   if (r < 0)
     throw std::runtime_error("ri_producer_cache_enable failed");
 }
 
-
-void ProducerBase::cache_disable() noexcept
-{
+void ProducerBase::cache_disable() noexcept {
   ::ri_producer_cache_disable(producer_.get());
 }
-
 
 std::expected<ForcePushResult, QueueError> ProducerBase::force_push() noexcept {
   ::ri_force_push_result_t result = ::ri_producer_force_push(producer_.get());
@@ -285,16 +305,14 @@ size_t ChannelGroup::producer_message_size(unsigned index) const {
   return attr->msg_size;
 }
 
-
-bool filter_callback(const ::ri_group_attr_t* c_attr, unsigned, unsigned, void* user_data)
-{
-  GroupAttr attr = GroupAttr::from_c_attr(c_attr);
-  auto& filter = *static_cast<Server::Filter*>(user_data);
+bool filter_callback(const ::ri_group_attr_t *c_attr, unsigned, unsigned,
+                     void *user_data) {
+  auto attr = GroupAttr::from_c_attr(c_attr);
+  auto &filter = *static_cast<Server::Filter *>(user_data);
   return filter(attr);
 }
 
-Server::Server(const std::string &path, int backlog)
-{
+Server::Server(const std::string &path, int backlog) {
   ::ri_server_t *server = ::ri_server_new(path.c_str(), backlog);
   if (server == nullptr) {
     throw std::runtime_error("ri_server_new returned NULL");
@@ -303,12 +321,9 @@ Server::Server(const std::string &path, int backlog)
   server_ = ServerPtr(server);
 }
 
-ChannelGroup Server::accept(Filter filter)
-{
-  ::ri_group_t *group = ::ri_server_accept(
-      server_.get(),
-      filter_callback,
-      &filter);
+ChannelGroup Server::accept(Filter filter) {
+  ::ri_group_t *group =
+      ::ri_server_accept(server_.get(), filter_callback, &filter);
 
   if (group == nullptr) {
     throw std::runtime_error("ri_server_accept returned NULL");
@@ -317,9 +332,28 @@ ChannelGroup Server::accept(Filter filter)
   return ChannelGroup(GroupPtr(group));
 }
 
-int Server::get_socket() const noexcept
-{
+int Server::get_socket() const noexcept {
   return ::ri_server_socket(server_.get());
+}
+
+ChannelGroup client_connect(int socket, const GroupAttr &attr) {
+  auto c_attr = CGroupAttr(attr);
+  ::ri_group_t *group = ::ri_client_socket_connect(socket, c_attr.get());
+  if (group == nullptr) {
+    throw std::runtime_error("ri_server_accept returned NULL");
+  }
+
+  return ChannelGroup(GroupPtr(group));
+}
+
+ChannelGroup client_connect(const std::string &path, const GroupAttr &attr) {
+  auto c_attr = CGroupAttr(attr);
+  ::ri_group_t *group = ::ri_client_connect(path.c_str(), c_attr.get());
+  if (group == nullptr) {
+    throw std::runtime_error("ri_server_accept returned NULL");
+  }
+
+  return ChannelGroup(GroupPtr(group));
 }
 
 } // namespace rtipc

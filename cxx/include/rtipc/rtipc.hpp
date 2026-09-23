@@ -275,9 +275,10 @@ private:
 
 
 
-class Server final{
+class Server final
+{
   public:
-  using Filter = std::function<bool(const GroupAttr&)>;
+  using Filter = std::function<bool(const GroupAttr& attr)>;
   Server(const std::string &path, int backlog = 1);
   ~Server() noexcept = default;
 
@@ -296,4 +297,6 @@ class Server final{
   ServerPtr server_;
 };
 
+ChannelGroup client_connect(int socket, const GroupAttr& attr);
+ChannelGroup client_connect(const std::string &path, const GroupAttr& attr);
 } // namespace rtipc
