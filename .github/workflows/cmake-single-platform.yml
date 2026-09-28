@@ -23,7 +23,9 @@ jobs:
     - id: install
       shell: bash
       run: |
-          sudo update-alternatives --install /usr/bin/gcc gcc
+          LATEST_VERSION=$(ls /usr/bin/gcc-[0-9]* | grep -oE '[0-9]+$' | sort -n | tail -n1)
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$LATEST_VERSION 100 --slave /usr/bin/g++ g++ /usr/bin/g++-$LATEST_VERSION
+
     - uses: actions/checkout@v4
 
     - name: Configure CMake
