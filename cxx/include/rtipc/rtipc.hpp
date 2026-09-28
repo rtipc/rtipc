@@ -5,7 +5,6 @@
 #include <memory>
 #include <optional>
 #include <span>
-#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -51,7 +50,6 @@ struct GroupDeleter {
   }
 };
 
-
 struct ServerDeleter {
   void operator()(::ri_server *server) const noexcept {
     if (server)
@@ -65,6 +63,13 @@ using ProducerPtr = std::unique_ptr<ri_producer, ProducerDeleter>;
 using GroupPtr = std::unique_ptr<ri_group, GroupDeleter>;
 using ServerPtr = std::unique_ptr<ri_server, ServerDeleter>;
 
+
+enum class Error {
+  null_pointer,
+  index_out_of_range,
+  attribute_mismatch,
+  message_size_mismatch,
+};
 
 enum class QueueError {
   invalid_index,
@@ -87,22 +92,23 @@ enum class PopResult {
   messages_discarded,
 };
 
-struct ChannelAttr {
-  static ChannelAttr from_c_attr(const ::ri_channel_attr *c_attr);
+
+struct ChannelAttributes {
+  static ChannelAttributes from_c_attributes(const ::ri_channel_attr *c_attr);
 
   size_t message_size;
   unsigned additional_messages;
   bool eventfd;
   Info info;
-  bool operator==(const ChannelAttr&) const = default;
+  bool operator==(const ChannelAttributes &) const = default;
 };
 
-struct GroupAttr {
-  static GroupAttr from_c_attr(const ::ri_group_attr *c_attr);
-  std::vector<ChannelAttr> consumers;
-  std::vector<ChannelAttr> producers;
+struct GroupAttributes {
+  static GroupAttributes from_c_attributes(const ::ri_group_attr *c_attr);
+  std::vector<ChannelAttributes> consumers;
+  std::vector<ChannelAttributes> producers;
   Info info;
-  bool operator==(const GroupAttr&) const = default;
+  bool operator==(const GroupAttributes &) const = default;
 };
 
 class ConsumerBase {
@@ -126,6 +132,7 @@ protected:
 
   int get_eventfd() const noexcept;
   int take_eventfd() noexcept;
+
 protected:
   ConsumerPtr consumer_;
 };
@@ -154,8 +161,8 @@ public:
   }
 
   using ConsumerBase::count_messages;
-  using ConsumerBase::pop;
   using ConsumerBase::get_eventfd;
+  using ConsumerBase::pop;
   using ConsumerBase::take_eventfd;
 };
 
@@ -206,13 +213,13 @@ public:
   Producer(Producer &&other) noexcept = default;
   Producer &operator=(Producer &&other) noexcept = default;
 
+  using ProducerBase::cache_disable;
+  using ProducerBase::cache_enable;
   using ProducerBase::count_messages;
   using ProducerBase::force_push;
-  using ProducerBase::try_push;
   using ProducerBase::get_eventfd;
   using ProducerBase::take_eventfd;
-  using ProducerBase::cache_enable;
-  using ProducerBase::cache_disable;
+  using ProducerBase::try_push;
 
   T &current_message() const noexcept {
     void *vptr = current_message_ptr();
@@ -222,12 +229,13 @@ public:
 };
 
 class ChannelGroup final {
+  friend class Server;
 public:
-  explicit ChannelGroup(GroupPtr group) : group_(std::move(group)) {}
-  explicit ChannelGroup(const GroupAttr &attr);
+  explicit ChannelGroup(GroupPtr group) noexcept : group_(std::move(group))  {}
+  static std::expected<ChannelGroup, Error> from_attributes(const GroupAttributes &group_attr) noexcept;
 
   // deserialize
-  explicit ChannelGroup(const std::span<std::byte> req, std::span<int> fds);
+  static std::expected<ChannelGroup, Error> deserialize(const std::span<std::byte> req, std::span<int> fds);
 
   ~ChannelGroup() noexcept = default;
 
@@ -239,47 +247,69 @@ public:
   ChannelGroup(ChannelGroup &&other) noexcept = default;
   ChannelGroup &operator=(ChannelGroup &&other) noexcept = default;
 
-  std::tuple<std::vector<std::byte>, std::vector<int>> serialize() const;
+  std::expected<std::tuple<std::vector<std::byte>, std::vector<int>>, int> serialize() const noexcept;
 
-  template <TriviallyCopyable T> Consumer<T> acquire_consumer(unsigned index) {
+  std::expected<ChannelAttributes, Error>
+  get_consumer_attributes(unsigned index) const noexcept;
 
-    size_t size = consumer_message_size(index);
+  std::expected<ChannelAttributes, Error>
+  get_producer_attributes(unsigned index) const noexcept;
 
-    if (size < sizeof(T))
-      throw std::length_error("channel message size too small to hold struct");
+  template <TriviallyCopyable T>
+  std::expected<Consumer<T>, Error>
+  acquire_consumer(unsigned index) noexcept {
+    auto size = consumer_message_size(index);
+    if (!size)
+      return std::unexpected(Error::index_out_of_range);
 
-    return Consumer<T>(acquire_consumer_impl(index));
+    if (*size < sizeof(T))
+      return std::unexpected(Error::message_size_mismatch);
+
+    auto consumer = acquire_consumer_impl(index);
+
+    if(!consumer)
+      return std::unexpected(consumer.error());
+
+    return Consumer<T>(std::move(*consumer));
   }
 
-  template <TriviallyCopyable T> Producer<T> acquire_producer(unsigned index) {
-    if (!std::is_trivially_copyable_v<T>)
-      throw std::invalid_argument("Message type is not trivially copyable");
+  template <TriviallyCopyable T>
+  std::expected<Producer<T>, Error>
+  acquire_producer(unsigned index) noexcept {
+    auto size = producer_message_size(index);
+    if (!size)
+      return std::unexpected(Error::index_out_of_range);
 
-    size_t size = producer_message_size(index);
-    if (size < sizeof(T))
-      throw std::length_error("channel message size too small to hold struct");
+    if (*size < sizeof(T))
+      return std::unexpected(Error::message_size_mismatch);
 
-    return Producer<T>(acquire_producer_impl(index));
+    auto producer = acquire_producer_impl(index);
+
+    if(!producer)
+      return std::unexpected(producer.error());
+
+    return Producer<T>(std::move(*producer));
   }
 
 private:
-  ConsumerPtr acquire_consumer_impl(unsigned index);
-  ProducerPtr acquire_producer_impl(unsigned index);
+  std::expected<ConsumerPtr, Error>
+  acquire_consumer_impl(unsigned index) noexcept;
+  std::expected<ProducerPtr, Error>
+  acquire_producer_impl(unsigned index) noexcept;
 
-  size_t consumer_message_size(unsigned index) const;
-  size_t producer_message_size(unsigned index) const;
+  std::expected<size_t, Error>
+  consumer_message_size(unsigned index) const noexcept;
+  std::expected<size_t, Error>
+  producer_message_size(unsigned index) const noexcept;
 
 private:
   GroupPtr group_;
 };
 
-
-
-class Server final
-{
-  public:
-  using Filter = std::function<bool(const GroupAttr& attr)>;
-  Server(const std::string &path, int backlog = 1);
+class Server final {
+public:
+  using Filter = std::function<bool(const GroupAttributes &attr)>;
+  static std::expected<Server, Error> listen(const std::string &path, int backlog = 1) noexcept;
   ~Server() noexcept = default;
 
   // Non-copyable
@@ -290,13 +320,16 @@ class Server final
   Server(Server &&other) noexcept = default;
   Server &operator=(Server &&other) noexcept = default;
 
-  ChannelGroup accept(Filter filter);
+  std::expected<ChannelGroup, Error> accept(Filter filter) noexcept;
   int get_socket() const noexcept;
 
-  private:
+private:
+  explicit Server(ServerPtr server) noexcept : server_(std::move(server))  {}
   ServerPtr server_;
 };
 
-ChannelGroup client_connect(int socket, const GroupAttr& attr);
-ChannelGroup client_connect(const std::string &path, const GroupAttr& attr);
+std::expected<ChannelGroup, Error>
+client_connect(int socket, const GroupAttributes &attr) noexcept;
+std::expected<ChannelGroup, Error>
+client_connect(const std::string &path, const GroupAttributes &attr) noexcept;
 } // namespace rtipc

@@ -34,52 +34,52 @@ static constexpr ::ri_info_t to_c_info(const Info &info) {
 }
 
 static constexpr ::ri_channel_attr_t
-to_c_channel_attr(const ChannelAttr &attr) {
+to_c_channel_attributes(const ChannelAttributes &attr) {
   return ::ri_channel_attr_t{.msg_size = attr.message_size,
                              .add_msgs = attr.additional_messages,
                              .eventfd = attr.eventfd,
                              .info = to_c_info(attr.info)};
 }
 
-ChannelAttr ChannelAttr::from_c_attr(const ::ri_channel_attr *c_attr) {
-  return ChannelAttr{c_attr->msg_size, c_attr->add_msgs, c_attr->eventfd,
+ChannelAttributes ChannelAttributes::from_c_attributes(const ::ri_channel_attr *c_attr) {
+  return ChannelAttributes{c_attr->msg_size, c_attr->add_msgs, c_attr->eventfd,
                      Info((char *)c_attr->info.data,
                           (char *)c_attr->info.data + c_attr->info.size)};
 }
 
-GroupAttr GroupAttr::from_c_attr(const ::ri_group_attr *group_attr) {
-  auto consumers = std::vector<ChannelAttr>();
+GroupAttributes GroupAttributes::from_c_attributes(const ::ri_group_attr *group_attr) {
+  auto consumers = std::vector<ChannelAttributes>();
 
-  for (const ::ri_channel_attr_t *a = group_attr->consumers;
+  for (const auto *a = group_attr->consumers;
        (a != nullptr) && (a->msg_size > 0); a++)
-    consumers.emplace_back(ChannelAttr::from_c_attr(a));
+    consumers.emplace_back(ChannelAttributes::from_c_attributes(a));
 
-  auto producers = std::vector<ChannelAttr>();
+  auto producers = std::vector<ChannelAttributes>();
 
-  for (const ::ri_channel_attr_t *a = group_attr->producers;
+  for (const auto *a = group_attr->producers;
        (a != nullptr) && (a->msg_size > 0); a++)
-    producers.emplace_back(ChannelAttr::from_c_attr(a));
+    producers.emplace_back(ChannelAttributes::from_c_attributes(a));
 
   auto info = Info((char *)group_attr->info.data,
                    (char *)group_attr->info.data + group_attr->info.size);
 
-  return GroupAttr{consumers, producers, info};
+  return GroupAttributes{consumers, producers, info};
 }
 
-class CGroupAttr final {
+class CGroupAttributes final {
 public:
-  explicit CGroupAttr(const GroupAttr &group_attr) {
+  explicit CGroupAttributes(const GroupAttributes &group_attr) {
     consumers_.reserve(group_attr.consumers.size() + 1);
     producers_.reserve(group_attr.producers.size() + 1);
 
     for (const auto &attr : group_attr.consumers) {
-      consumers_.emplace_back(to_c_channel_attr(attr));
+      consumers_.emplace_back(to_c_channel_attributes(attr));
     }
 
     consumers_.emplace_back(zero_attr);
 
     for (const auto &attr : group_attr.producers) {
-      producers_.emplace_back(to_c_channel_attr(attr));
+      producers_.emplace_back(to_c_channel_attributes(attr));
     }
 
     producers_.emplace_back(zero_attr);
@@ -105,7 +105,7 @@ const void *ConsumerBase::current_message_ptr() const noexcept {
 }
 
 std::expected<PopResult, QueueError> ConsumerBase::pop() noexcept {
-  ::ri_pop_result_t result = ::ri_consumer_pop(consumer_.get());
+  auto result = ::ri_consumer_pop(consumer_.get());
 
   switch (result) {
   case ::RI_POP_RESULT_NO_MSG:
@@ -155,7 +155,7 @@ int ProducerBase::take_eventfd() noexcept {
 void ProducerBase::cache_enable() {
   int r = ::ri_producer_cache_enable(producer_.get());
   if (r < 0)
-    throw std::runtime_error("ri_producer_cache_enable failed");
+    throw std::bad_alloc();
 }
 
 void ProducerBase::cache_disable() noexcept {
@@ -197,7 +197,8 @@ ProducerBase::count_messages() const noexcept {
   return cnt;
 }
 
-ChannelGroup::ChannelGroup(const GroupAttr &group_attr) {
+std::expected<ChannelGroup, Error> ChannelGroup::from_attributes(const GroupAttributes &group_attr) noexcept
+{
   std::vector<ri_channel_attr_t> c_consumers;
   std::vector<ri_channel_attr_t> c_producers;
 
@@ -205,13 +206,13 @@ ChannelGroup::ChannelGroup(const GroupAttr &group_attr) {
   c_producers.reserve(group_attr.producers.size() + 1);
 
   for (const auto &attr : group_attr.consumers) {
-    c_consumers.emplace_back(to_c_channel_attr(attr));
+    c_consumers.emplace_back(to_c_channel_attributes(attr));
   }
 
   c_consumers.emplace_back(zero_attr);
 
   for (const auto &attr : group_attr.producers) {
-    c_producers.emplace_back(to_c_channel_attr(attr));
+    c_producers.emplace_back(to_c_channel_attributes(attr));
   }
 
   c_producers.emplace_back(zero_attr);
@@ -222,22 +223,23 @@ ChannelGroup::ChannelGroup(const GroupAttr &group_attr) {
 
   ::ri_group_t *group = ::ri_group_from_attr(&c_group_attr);
 
-  if (group == nullptr) {
-    throw std::runtime_error("ri_group_from_attr returned NULL");
+  if (!group) {
+    return std::unexpected(Error::null_pointer);
   }
 
-  group_ = GroupPtr(group);
+  return ChannelGroup(GroupPtr(group));
 }
 
-ChannelGroup::ChannelGroup(const std::span<std::byte> req, std::span<int> fds) {
+std::expected<ChannelGroup, Error> ChannelGroup::deserialize(const std::span<std::byte> req, std::span<int> fds)
+{
   const void *c_req = req.data();
   size_t req_size = req.size();
   int *c_fds = fds.data();
   unsigned n_fds = fds.size();
 
-  ::ri_group_t *group = ::ri_group_deserialize(c_req, req_size, c_fds, &n_fds);
-  if (group == nullptr) {
-    throw std::runtime_error("ri_group_deserialize returned NULL");
+  auto *group = ::ri_group_deserialize(c_req, req_size, c_fds, &n_fds);
+  if (!group) {
+    return std::unexpected(Error::null_pointer);
   }
 
   // close remaining fds
@@ -248,11 +250,11 @@ ChannelGroup::ChannelGroup(const std::span<std::byte> req, std::span<int> fds) {
     }
   }
 
-  group_ = GroupPtr(group);
+  return ChannelGroup(GroupPtr(group));
 }
 
-std::tuple<std::vector<std::byte>, std::vector<int>>
-ChannelGroup::serialize() const {
+std::expected<std::tuple<std::vector<std::byte>, std::vector<int>>, int> ChannelGroup::serialize() const noexcept
+{
   unsigned n_fds = 253; // maximum file descriptors that can be sent over a unix
                         // domain socket (kernel/include/net/scm.h)
   size_t req_size = ::ri_group_serialize_size(group_.get());
@@ -261,73 +263,93 @@ ChannelGroup::serialize() const {
   int r = ::ri_group_serialize(group_.get(), req.data(), req.size(), fds.data(),
                                &n_fds);
   if (r < 0)
-    throw std::runtime_error("ri_group_serialize returned error");
+    return std::unexpected(r);
 
   // delete unused fds
   fds.erase(fds.begin() + n_fds, fds.end());
 
-  return {req, fds};
+  return std::tuple<std::vector<std::byte>, std::vector<int>>{req, fds};
 }
 
-ConsumerPtr ChannelGroup::acquire_consumer_impl(unsigned index) {
-  ::ri_consumer *consumer = ::ri_group_acquire_consumer(group_.get(), index);
+std::expected<ChannelAttributes, Error>
+ChannelGroup::get_consumer_attributes(unsigned index) const noexcept {
+  const ::ri_channel_attr *attr =
+      ::ri_group_get_consumer_attr(group_.get(), index);
+  if (!attr)
+    return std::unexpected(Error::index_out_of_range);
 
-  if (consumer == nullptr)
-    throw std::runtime_error("ri_group_acquire_consumer returned NULL");
+  return ChannelAttributes::from_c_attributes(attr);
+}
+
+std::expected<ChannelAttributes, Error>
+ChannelGroup::get_producer_attributes(unsigned index) const noexcept {
+  const ::ri_channel_attr *attr =
+      ::ri_group_get_producer_attr(group_.get(), index);
+  if (!attr)
+    return std::unexpected(Error::index_out_of_range);
+
+  return ChannelAttributes::from_c_attributes(attr);
+}
+
+std::expected<ConsumerPtr, Error>
+ChannelGroup::acquire_consumer_impl(unsigned index) noexcept {
+  auto *consumer = ::ri_group_acquire_consumer(group_.get(), index);
+
+  if (!consumer)
+    return std::unexpected(Error::index_out_of_range);
 
   return ConsumerPtr(consumer);
 }
 
-ProducerPtr ChannelGroup::acquire_producer_impl(unsigned index) {
-  ::ri_producer *producer = ::ri_group_acquire_producer(group_.get(), index);
+std::expected<ProducerPtr, Error>
+ChannelGroup::acquire_producer_impl(unsigned index) noexcept {
+  auto *producer = ::ri_group_acquire_producer(group_.get(), index);
 
-  if (producer == nullptr)
-    throw std::runtime_error("ri_group_acquire_producer returned NULL");
+  if (!producer)
+    return std::unexpected(Error::index_out_of_range);
 
   return ProducerPtr(producer);
 }
 
-size_t ChannelGroup::consumer_message_size(unsigned index) const {
-  const ::ri_channel_attr_t *attr =
-      ::ri_group_get_consumer_attr(group_.get(), index);
-  if (attr == nullptr)
-    throw std::runtime_error("ri_group_get_consumer_attr returned NULL");
+std::expected<size_t, Error>
+ChannelGroup::consumer_message_size(unsigned index) const noexcept {
+  const auto *attr = ::ri_group_get_consumer_attr(group_.get(), index);
+  if (!attr)
+    return std::unexpected(Error::index_out_of_range);
 
   return attr->msg_size;
 }
 
-size_t ChannelGroup::producer_message_size(unsigned index) const {
-  const ::ri_channel_attr_t *attr =
-      ::ri_group_get_producer_attr(group_.get(), index);
-  if (attr == nullptr)
-    throw std::runtime_error("ri_group_get_producer_attr returned NULL");
+std::expected<size_t, Error>
+ChannelGroup::producer_message_size(unsigned index) const noexcept {
+  const auto *attr = ::ri_group_get_producer_attr(group_.get(), index);
+  if (!attr)
+    return std::unexpected(Error::index_out_of_range);
 
   return attr->msg_size;
 }
 
 bool filter_callback(const ::ri_group_attr_t *c_attr, unsigned, unsigned,
                      void *user_data) {
-  auto attr = GroupAttr::from_c_attr(c_attr);
+  auto attr = GroupAttributes::from_c_attributes(c_attr);
   auto &filter = *static_cast<Server::Filter *>(user_data);
   return filter(attr);
 }
 
-Server::Server(const std::string &path, int backlog) {
-  ::ri_server_t *server = ::ri_server_new(path.c_str(), backlog);
-  if (server == nullptr) {
-    throw std::runtime_error("ri_server_new returned NULL");
-  }
+std::expected<Server, Error> Server::listen(const std::string &path, int backlog) noexcept
+{
+  auto *server = ::ri_server_new(path.c_str(), backlog);
+  if (!server)
+    return std::unexpected(Error::null_pointer);
 
-  server_ = ServerPtr(server);
+  return Server(ServerPtr(server));
 }
 
-ChannelGroup Server::accept(Filter filter) {
-  ::ri_group_t *group =
-      ::ri_server_accept(server_.get(), filter_callback, &filter);
-
-  if (group == nullptr) {
-    throw std::runtime_error("ri_server_accept returned NULL");
-  }
+std::expected<ChannelGroup, Error>
+Server::accept(Filter filter) noexcept {
+  auto *group = ::ri_server_accept(server_.get(), filter_callback, &filter);
+  if (!group)
+    return std::unexpected(Error::null_pointer);
 
   return ChannelGroup(GroupPtr(group));
 }
@@ -336,22 +358,22 @@ int Server::get_socket() const noexcept {
   return ::ri_server_socket(server_.get());
 }
 
-ChannelGroup client_connect(int socket, const GroupAttr &attr) {
-  auto c_attr = CGroupAttr(attr);
+std::expected<ChannelGroup, Error>
+client_connect(int socket, const GroupAttributes &attr) noexcept {
+  auto c_attr = CGroupAttributes(attr);
   ::ri_group_t *group = ::ri_client_socket_connect(socket, c_attr.get());
-  if (group == nullptr) {
-    throw std::runtime_error("ri_server_accept returned NULL");
-  }
+  if (!group)
+    return std::unexpected(Error::null_pointer);
 
   return ChannelGroup(GroupPtr(group));
 }
 
-ChannelGroup client_connect(const std::string &path, const GroupAttr &attr) {
-  auto c_attr = CGroupAttr(attr);
+std::expected<ChannelGroup, Error>
+client_connect(const std::string &path, const GroupAttributes &attr) noexcept {
+  auto c_attr = CGroupAttributes(attr);
   ::ri_group_t *group = ::ri_client_connect(path.c_str(), c_attr.get());
-  if (group == nullptr) {
-    throw std::runtime_error("ri_server_accept returned NULL");
-  }
+  if (!group)
+    return std::unexpected(Error::null_pointer);
 
   return ChannelGroup(GroupPtr(group));
 }
