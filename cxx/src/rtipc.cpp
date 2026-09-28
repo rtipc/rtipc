@@ -41,13 +41,15 @@ to_c_channel_attributes(const ChannelAttributes &attr) {
                              .info = to_c_info(attr.info)};
 }
 
-ChannelAttributes ChannelAttributes::from_c_attributes(const ::ri_channel_attr *c_attr) {
+ChannelAttributes
+ChannelAttributes::from_c_attributes(const ::ri_channel_attr *c_attr) {
   return ChannelAttributes{c_attr->msg_size, c_attr->add_msgs, c_attr->eventfd,
-                     Info((char *)c_attr->info.data,
-                          (char *)c_attr->info.data + c_attr->info.size)};
+                           Info((char *)c_attr->info.data,
+                                (char *)c_attr->info.data + c_attr->info.size)};
 }
 
-GroupAttributes GroupAttributes::from_c_attributes(const ::ri_group_attr *group_attr) {
+GroupAttributes
+GroupAttributes::from_c_attributes(const ::ri_group_attr *group_attr) {
   auto consumers = std::vector<ChannelAttributes>();
 
   for (const auto *a = group_attr->consumers;
@@ -197,8 +199,8 @@ ProducerBase::count_messages() const noexcept {
   return cnt;
 }
 
-std::expected<ChannelGroup, Error> ChannelGroup::from_attributes(const GroupAttributes &group_attr) noexcept
-{
+std::expected<ChannelGroup, Error>
+ChannelGroup::from_attributes(const GroupAttributes &group_attr) noexcept {
   std::vector<ri_channel_attr_t> c_consumers;
   std::vector<ri_channel_attr_t> c_producers;
 
@@ -230,8 +232,8 @@ std::expected<ChannelGroup, Error> ChannelGroup::from_attributes(const GroupAttr
   return ChannelGroup(GroupPtr(group));
 }
 
-std::expected<ChannelGroup, Error> ChannelGroup::deserialize(const std::span<std::byte> req, std::span<int> fds)
-{
+std::expected<ChannelGroup, Error>
+ChannelGroup::deserialize(const std::span<std::byte> req, std::span<int> fds) noexcept {
   const void *c_req = req.data();
   size_t req_size = req.size();
   int *c_fds = fds.data();
@@ -253,8 +255,8 @@ std::expected<ChannelGroup, Error> ChannelGroup::deserialize(const std::span<std
   return ChannelGroup(GroupPtr(group));
 }
 
-std::expected<std::tuple<std::vector<std::byte>, std::vector<int>>, int> ChannelGroup::serialize() const noexcept
-{
+std::expected<std::tuple<std::vector<std::byte>, std::vector<int>>, int>
+ChannelGroup::serialize() const noexcept {
   unsigned n_fds = 253; // maximum file descriptors that can be sent over a unix
                         // domain socket (kernel/include/net/scm.h)
   size_t req_size = ::ri_group_serialize_size(group_.get());
@@ -336,8 +338,8 @@ bool filter_callback(const ::ri_group_attr_t *c_attr, unsigned, unsigned,
   return filter(attr);
 }
 
-std::expected<Server, Error> Server::listen(const std::string &path, int backlog) noexcept
-{
+std::expected<Server, Error> Server::listen(const std::string &path,
+                                            int backlog) noexcept {
   auto *server = ::ri_server_new(path.c_str(), backlog);
   if (!server)
     return std::unexpected(Error::null_pointer);
@@ -345,8 +347,7 @@ std::expected<Server, Error> Server::listen(const std::string &path, int backlog
   return Server(ServerPtr(server));
 }
 
-std::expected<ChannelGroup, Error>
-Server::accept(Filter filter) noexcept {
+std::expected<ChannelGroup, Error> Server::accept(Filter filter) noexcept {
   auto *group = ::ri_server_accept(server_.get(), filter_callback, &filter);
   if (!group)
     return std::unexpected(Error::null_pointer);

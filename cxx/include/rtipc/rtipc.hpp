@@ -63,7 +63,6 @@ using ProducerPtr = std::unique_ptr<ri_producer, ProducerDeleter>;
 using GroupPtr = std::unique_ptr<ri_group, GroupDeleter>;
 using ServerPtr = std::unique_ptr<ri_server, ServerDeleter>;
 
-
 enum class Error {
   null_pointer,
   index_out_of_range,
@@ -91,7 +90,6 @@ enum class PopResult {
   success,
   messages_discarded,
 };
-
 
 struct ChannelAttributes {
   static ChannelAttributes from_c_attributes(const ::ri_channel_attr *c_attr);
@@ -230,12 +228,15 @@ public:
 
 class ChannelGroup final {
   friend class Server;
+
 public:
-  explicit ChannelGroup(GroupPtr group) noexcept : group_(std::move(group))  {}
-  static std::expected<ChannelGroup, Error> from_attributes(const GroupAttributes &group_attr) noexcept;
+  explicit ChannelGroup(GroupPtr group) noexcept : group_(std::move(group)) {}
+  static std::expected<ChannelGroup, Error>
+  from_attributes(const GroupAttributes &group_attr) noexcept;
 
   // deserialize
-  static std::expected<ChannelGroup, Error> deserialize(const std::span<std::byte> req, std::span<int> fds);
+  static std::expected<ChannelGroup, Error>
+  deserialize(const std::span<std::byte> req, std::span<int> fds) noexcept;
 
   ~ChannelGroup() noexcept = default;
 
@@ -247,7 +248,8 @@ public:
   ChannelGroup(ChannelGroup &&other) noexcept = default;
   ChannelGroup &operator=(ChannelGroup &&other) noexcept = default;
 
-  std::expected<std::tuple<std::vector<std::byte>, std::vector<int>>, int> serialize() const noexcept;
+  std::expected<std::tuple<std::vector<std::byte>, std::vector<int>>, int>
+  serialize() const noexcept;
 
   std::expected<ChannelAttributes, Error>
   get_consumer_attributes(unsigned index) const noexcept;
@@ -256,8 +258,7 @@ public:
   get_producer_attributes(unsigned index) const noexcept;
 
   template <TriviallyCopyable T>
-  std::expected<Consumer<T>, Error>
-  acquire_consumer(unsigned index) noexcept {
+  std::expected<Consumer<T>, Error> acquire_consumer(unsigned index) noexcept {
     auto size = consumer_message_size(index);
     if (!size)
       return std::unexpected(Error::index_out_of_range);
@@ -267,15 +268,14 @@ public:
 
     auto consumer = acquire_consumer_impl(index);
 
-    if(!consumer)
+    if (!consumer)
       return std::unexpected(consumer.error());
 
     return Consumer<T>(std::move(*consumer));
   }
 
   template <TriviallyCopyable T>
-  std::expected<Producer<T>, Error>
-  acquire_producer(unsigned index) noexcept {
+  std::expected<Producer<T>, Error> acquire_producer(unsigned index) noexcept {
     auto size = producer_message_size(index);
     if (!size)
       return std::unexpected(Error::index_out_of_range);
@@ -285,7 +285,7 @@ public:
 
     auto producer = acquire_producer_impl(index);
 
-    if(!producer)
+    if (!producer)
       return std::unexpected(producer.error());
 
     return Producer<T>(std::move(*producer));
@@ -309,7 +309,8 @@ private:
 class Server final {
 public:
   using Filter = std::function<bool(const GroupAttributes &attr)>;
-  static std::expected<Server, Error> listen(const std::string &path, int backlog = 1) noexcept;
+  static std::expected<Server, Error> listen(const std::string &path,
+                                             int backlog = 1) noexcept;
   ~Server() noexcept = default;
 
   // Non-copyable
@@ -324,7 +325,7 @@ public:
   int get_socket() const noexcept;
 
 private:
-  explicit Server(ServerPtr server) noexcept : server_(std::move(server))  {}
+  explicit Server(ServerPtr server) noexcept : server_(std::move(server)) {}
   ServerPtr server_;
 };
 
