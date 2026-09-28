@@ -64,7 +64,7 @@ public:
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         continue;
       }
-      auto msg = response_.current_message().value();
+      const auto &msg = response_.current_message()->get();
       std::print("received id = {} result = {}\n", msg.id, msg.result);
       return {};
     }

@@ -59,13 +59,13 @@ public:
       return std::unexpected(ServerError::again);
     }
 
-    const auto &cmd = command_.current_message();
+    const auto &cmd = command_.current_message()->get();
 
     auto &rsp = response_.current_message();
 
-    rsp.id = cmd->id;
+    rsp.id = cmd.id;
 
-    auto cmdid = static_cast<CommandId>(cmd->id);
+    auto cmdid = static_cast<CommandId>(cmd.id);
 
     switch (cmdid) {
     case CommandId::hello:
@@ -75,11 +75,11 @@ public:
       rsp.result = 0;
       break;
     case CommandId::send_event:
-      rsp.result = send_events(cmd->args.send.id, cmd->args.send.num,
-                               cmd->args.send.force);
+      rsp.result = send_events(cmd.args.send.id, cmd.args.send.num,
+                               cmd.args.send.force);
       break;
     case CommandId::div:
-      rsp.result = server_div(cmd->args.div.divisor, cmd->args.div.divident,
+      rsp.result = server_div(cmd.args.div.divisor, cmd.args.div.divident,
                               &rsp.data.quotient);
       break;
     default:

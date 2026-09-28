@@ -149,7 +149,7 @@ public:
   Consumer(Consumer &&other) noexcept = default;
   Consumer &operator=(Consumer &&other) noexcept = default;
 
-  std::optional<const T &> current_message() const noexcept {
+  std::optional<std::reference_wrapper<const T>> current_message() const noexcept {
     const void *vptr = current_message_ptr();
     if (vptr == nullptr)
       return std::nullopt;
