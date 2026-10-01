@@ -233,7 +233,7 @@ ChannelGroup::from_attributes(const GroupAttributes &group_attr) noexcept {
 }
 
 std::expected<ChannelGroup, Error>
-ChannelGroup::deserialize(const std::span<std::byte> req, std::span<int> fds) noexcept {
+ChannelGroup::deserialize(std::span<const std::byte> req, std::span<int> fds) noexcept {
   const void *c_req = req.data();
   size_t req_size = req.size();
   int *c_fds = fds.data();

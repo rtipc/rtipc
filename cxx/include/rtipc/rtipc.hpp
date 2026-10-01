@@ -98,6 +98,7 @@ struct ChannelAttributes {
   unsigned additional_messages;
   bool eventfd;
   Info info;
+
   bool operator==(const ChannelAttributes &) const = default;
 };
 
@@ -106,6 +107,7 @@ struct GroupAttributes {
   std::vector<ChannelAttributes> consumers;
   std::vector<ChannelAttributes> producers;
   Info info;
+
   bool operator==(const GroupAttributes &) const = default;
 };
 
@@ -114,7 +116,8 @@ class ConsumerBase {
 
 protected:
   explicit ConsumerBase(ConsumerPtr consumer) noexcept
-      : consumer_(std::move(consumer)) {};
+      : consumer_(std::move(consumer)) {}
+
   virtual ~ConsumerBase() noexcept = default;
 
   ConsumerBase(const ConsumerBase &) = delete;
@@ -131,7 +134,6 @@ protected:
   int get_eventfd() const noexcept;
   int take_eventfd() noexcept;
 
-protected:
   ConsumerPtr consumer_;
 };
 
@@ -145,18 +147,17 @@ private:
 public:
   ~Consumer() noexcept override = default;
 
-  // Movable
   Consumer(Consumer &&) noexcept = default;
   Consumer &operator=(Consumer &&) noexcept = default;
 
   std::optional<std::reference_wrapper<const T>>
   current_message() const noexcept {
     const void *vptr = current_message_ptr();
+
     if (vptr == nullptr)
       return std::nullopt;
 
-    const T *ptr = static_cast<const T *>(vptr);
-    return *ptr;
+    return *static_cast<const T *>(vptr);
   }
 
   using ConsumerBase::count_messages;
@@ -170,14 +171,13 @@ class ProducerBase {
 
 protected:
   explicit ProducerBase(ProducerPtr producer) noexcept
-      : producer_(std::move(producer)) {};
+      : producer_(std::move(producer)) {}
+
   virtual ~ProducerBase() noexcept = default;
 
-  // Non-copyable
   ProducerBase(const ProducerBase &) = delete;
   ProducerBase &operator=(const ProducerBase &) = delete;
 
-  // Movable
   ProducerBase(ProducerBase &&) noexcept = default;
   ProducerBase &operator=(ProducerBase &&) noexcept = default;
 
@@ -208,7 +208,6 @@ private:
 public:
   ~Producer() noexcept override = default;
 
-  // Movable
   Producer(Producer &&) noexcept = default;
   Producer &operator=(Producer &&) noexcept = default;
 
@@ -222,8 +221,7 @@ public:
 
   T &current_message() const noexcept {
     void *vptr = current_message_ptr();
-    T *ptr = static_cast<T *>(vptr);
-    return *ptr;
+    return *static_cast<T *>(vptr);
   }
 };
 
@@ -232,20 +230,18 @@ class ChannelGroup final {
 
 public:
   explicit ChannelGroup(GroupPtr group) noexcept : group_(std::move(group)) {}
+
   static std::expected<ChannelGroup, Error>
   from_attributes(const GroupAttributes &group_attr) noexcept;
 
-  // deserialize
   static std::expected<ChannelGroup, Error>
-  deserialize(const std::span<std::byte> req, std::span<int> fds) noexcept;
+  deserialize(std::span<const std::byte> req, std::span<int> fds) noexcept;
 
   ~ChannelGroup() noexcept = default;
 
-  // Non-copyable
   ChannelGroup(const ChannelGroup &) = delete;
   ChannelGroup &operator=(const ChannelGroup &) = delete;
 
-  // Movable
   ChannelGroup(ChannelGroup &&) noexcept = default;
   ChannelGroup &operator=(ChannelGroup &&) noexcept = default;
 
@@ -261,8 +257,9 @@ public:
   template <TriviallyCopyable T>
   std::expected<Consumer<T>, Error> acquire_consumer(unsigned index) noexcept {
     auto size = consumer_message_size(index);
+
     if (!size)
-      return std::unexpected(Error::index_out_of_range);
+      return std::unexpected(size.error());
 
     if (*size < sizeof(T))
       return std::unexpected(Error::message_size_mismatch);
@@ -278,8 +275,9 @@ public:
   template <TriviallyCopyable T>
   std::expected<Producer<T>, Error> acquire_producer(unsigned index) noexcept {
     auto size = producer_message_size(index);
+
     if (!size)
-      return std::unexpected(Error::index_out_of_range);
+      return std::unexpected(size.error());
 
     if (*size < sizeof(T))
       return std::unexpected(Error::message_size_mismatch);
@@ -295,15 +293,16 @@ public:
 private:
   std::expected<ConsumerPtr, Error>
   acquire_consumer_impl(unsigned index) noexcept;
+
   std::expected<ProducerPtr, Error>
   acquire_producer_impl(unsigned index) noexcept;
 
   std::expected<size_t, Error>
   consumer_message_size(unsigned index) const noexcept;
+
   std::expected<size_t, Error>
   producer_message_size(unsigned index) const noexcept;
 
-private:
   GroupPtr group_;
 };
 
@@ -314,19 +313,19 @@ public:
                                              int backlog = 1) noexcept;
   ~Server() noexcept = default;
 
-  // Non-copyable
   Server(const Server &) = delete;
   Server &operator=(const Server &) = delete;
 
-  // Movable
   Server(Server &&) noexcept = default;
   Server &operator=(Server &&) noexcept = default;
 
   std::expected<ChannelGroup, Error> accept(Filter filter) noexcept;
+
   int get_socket() const noexcept;
 
 private:
   explicit Server(ServerPtr server) noexcept : server_(std::move(server)) {}
+
   ServerPtr server_;
 };
 
@@ -334,4 +333,5 @@ std::expected<ChannelGroup, Error>
 client_connect(int socket, const GroupAttributes &attr) noexcept;
 std::expected<ChannelGroup, Error>
 client_connect(const std::string &path, const GroupAttributes &attr) noexcept;
+
 } // namespace rtipc
