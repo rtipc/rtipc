@@ -58,10 +58,10 @@ struct ServerDeleter {
 };
 
 using Info = std::vector<char>;
-using ConsumerPtr = std::unique_ptr<ri_consumer, ConsumerDeleter>;
-using ProducerPtr = std::unique_ptr<ri_producer, ProducerDeleter>;
-using GroupPtr = std::unique_ptr<ri_group, GroupDeleter>;
-using ServerPtr = std::unique_ptr<ri_server, ServerDeleter>;
+using ConsumerPtr = std::unique_ptr<::ri_consumer, ConsumerDeleter>;
+using ProducerPtr = std::unique_ptr<::ri_producer, ProducerDeleter>;
+using GroupPtr = std::unique_ptr<::ri_group, GroupDeleter>;
+using ServerPtr = std::unique_ptr<::ri_server, ServerDeleter>;
 
 enum class Error {
   null_pointer,
