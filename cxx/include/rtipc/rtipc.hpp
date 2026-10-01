@@ -120,8 +120,8 @@ protected:
   ConsumerBase(const ConsumerBase &) = delete;
   ConsumerBase &operator=(const ConsumerBase &) = delete;
 
-  ConsumerBase(ConsumerBase &&other) noexcept = default;
-  ConsumerBase &operator=(ConsumerBase &&other) noexcept = default;
+  ConsumerBase(ConsumerBase &&) noexcept = default;
+  ConsumerBase &operator=(ConsumerBase &&) noexcept = default;
 
   const void *current_message_ptr() const noexcept;
 
@@ -146,10 +146,11 @@ public:
   ~Consumer() noexcept override = default;
 
   // Movable
-  Consumer(Consumer &&other) noexcept = default;
-  Consumer &operator=(Consumer &&other) noexcept = default;
+  Consumer(Consumer &&) noexcept = default;
+  Consumer &operator=(Consumer &&) noexcept = default;
 
-  std::optional<std::reference_wrapper<const T>> current_message() const noexcept {
+  std::optional<std::reference_wrapper<const T>>
+  current_message() const noexcept {
     const void *vptr = current_message_ptr();
     if (vptr == nullptr)
       return std::nullopt;
@@ -177,8 +178,8 @@ protected:
   ProducerBase &operator=(const ProducerBase &) = delete;
 
   // Movable
-  ProducerBase(ProducerBase &&other) noexcept = default;
-  ProducerBase &operator=(ProducerBase &&other) noexcept = default;
+  ProducerBase(ProducerBase &&) noexcept = default;
+  ProducerBase &operator=(ProducerBase &&) noexcept = default;
 
   void *current_message_ptr() const noexcept;
 
@@ -208,8 +209,8 @@ public:
   ~Producer() noexcept override = default;
 
   // Movable
-  Producer(Producer &&other) noexcept = default;
-  Producer &operator=(Producer &&other) noexcept = default;
+  Producer(Producer &&) noexcept = default;
+  Producer &operator=(Producer &&) noexcept = default;
 
   using ProducerBase::cache_disable;
   using ProducerBase::cache_enable;
@@ -245,8 +246,8 @@ public:
   ChannelGroup &operator=(const ChannelGroup &) = delete;
 
   // Movable
-  ChannelGroup(ChannelGroup &&other) noexcept = default;
-  ChannelGroup &operator=(ChannelGroup &&other) noexcept = default;
+  ChannelGroup(ChannelGroup &&) noexcept = default;
+  ChannelGroup &operator=(ChannelGroup &&) noexcept = default;
 
   std::expected<std::tuple<std::vector<std::byte>, std::vector<int>>, int>
   serialize() const noexcept;
@@ -318,8 +319,8 @@ public:
   Server &operator=(const Server &) = delete;
 
   // Movable
-  Server(Server &&other) noexcept = default;
-  Server &operator=(Server &&other) noexcept = default;
+  Server(Server &&) noexcept = default;
+  Server &operator=(Server &&) noexcept = default;
 
   std::expected<ChannelGroup, Error> accept(Filter filter) noexcept;
   int get_socket() const noexcept;
